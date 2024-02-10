@@ -50,8 +50,38 @@ func SignUpUser(c *fiber.Ctx) error {
 	} else if result.Error != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Something bad happened"})
 	}
+	verificationCode := generateVerificationCode()
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "data": fiber.Map{"user": models.FilterUserRecord(&newUser)}})
+	// Отправка письма с кодом подтверждения на email
+	err = sendVerificationEmail(newUser.Email, verificationCode)
+	if err != nil {
+		// Обработка ошибки отправки письма
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to send verification email"})
+	}
+	newUser.ConfirmationCode = verificationCode
+	result = initializers.DB.Save(&newUser)
+	if result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user record"})
+	}
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["sub"] = newUser.ID
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // Например, срок действия токена - 24 часа
+
+	config, err := initializers.LoadConfig(".")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to load config"})
+	}
+
+	tokenString, err := token.SignedString([]byte(config.JwtSecret))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to generate JWT token"})
+	}
+
+	// ваш существующий код
+
+	// Отправляем токен вместе с ответом
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "success", "data": fiber.Map{"user": models.FilterUserRecord(&newUser), "token": tokenString}})
 }
 
 func SignInUser(c *fiber.Ctx) error {
