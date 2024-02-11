@@ -6,7 +6,7 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
-	"github.com/wpcodevo/golang-fiber-jwt/initializers"
+	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"strings"
 
@@ -36,25 +36,23 @@ func ConfirmUser(c *fiber.Ctx) error {
 	user.Verified = true
 	user.ConfirmationCode = ""
 
-	if err := initializers.DB.Save(&user).Error; err != nil {
+	if err := initializers2.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user"})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "User confirmed successfully"})
 }
 
-// Функция для извлечения пользователя из JWT токена
 func getUserFromToken(c *fiber.Ctx) (models.User, error) {
 	token := c.Get("Authorization")
 	if token == "" {
 		return models.User{}, errors.New("missing token")
 	}
 
-	// Проверка и верификация токена
 	token = strings.ReplaceAll(token, "Bearer ", "")
 	claims := jwt.MapClaims{}
 
-	config, err := initializers.LoadConfig(".")
+	config, err := initializers2.LoadConfig(".")
 	if err != nil {
 		return models.User{}, err
 	}
@@ -66,22 +64,19 @@ func getUserFromToken(c *fiber.Ctx) (models.User, error) {
 		return models.User{}, err
 	}
 
-	// Извлечение идентификатора пользователя из токена
 	userID, ok := claims["sub"].(string)
 	if !ok {
 		return models.User{}, errors.New("invalid token")
 	}
 
-	// Получение пользователя из базы данных по идентификатору
 	var user models.User
-	if err := initializers.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := initializers2.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return models.User{}, err
 	}
 
 	return user, nil
 }
 func sendVerificationEmail(email, code string) error {
-	// Настройки SMTP клиента для отправки писем
 	auth := smtp.PlainAuth("", "eligdigital@gmail.com", "dqwqqgtxbbuwobgt", "smtp.gmail.com")
 	to := []string{email}
 
@@ -114,7 +109,7 @@ func sendVerificationEmail(email, code string) error {
 	return nil
 }
 func generateVerificationCode() string {
-	randomBytes := make([]byte, 6) // Например, 6 символов кода
+	randomBytes := make([]byte, 6)
 	rand.Read(randomBytes)
 	return base64.URLEncoding.EncodeToString(randomBytes)
 }

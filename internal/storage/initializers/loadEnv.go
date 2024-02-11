@@ -13,11 +13,12 @@ type Config struct {
 	DBName         string `mapstructure:"POSTGRES_DB"`
 	DBPort         string `mapstructure:"POSTGRES_PORT"`
 
-	JwtSecret    string        `mapstructure:"JWT_SECRET"`
-	JwtExpiresIn time.Duration `mapstructure:"JWT_EXPIRED_IN"`
-	JwtMaxAge    int           `mapstructure:"JWT_MAXAGE"`
-
-	ClientOrigin string `mapstructure:"CLIENT_ORIGIN"`
+	JwtSecret             string        `mapstructure:"JWT_SECRET"`
+	JwtExpiresIn          time.Duration `mapstructure:"JWT_EXPIRED_IN"`
+	JwtMaxAge             int           `mapstructure:"JWT_MAXAGE"`
+	RefreshTokenMaxAge    int           `mapstructure:"REFRESH_TOKEN_MAXAGE"`
+	RefreshTokenExpiresIn time.Duration `mapstructure:"REFRESH_TOKEN_EXPIRED_IN"`
+	ClientOrigin          string        `mapstructure:"CLIENT_ORIGIN"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

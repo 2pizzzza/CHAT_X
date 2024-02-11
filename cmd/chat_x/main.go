@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
+	initializers "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/wpcodevo/golang-fiber-jwt/controllers"
-	"github.com/wpcodevo/golang-fiber-jwt/initializers"
-	"github.com/wpcodevo/golang-fiber-jwt/middleware"
 )
 
 func init() {
@@ -38,6 +38,8 @@ func main() {
 		router.Post("/login", controllers.SignInUser)
 		router.Get("/logout", middleware.DeserializeUser, controllers.LogoutUser)
 		router.Post("/confirm", controllers.ConfirmUser)
+		router.Post("/refresh", controllers.RefreshAccessToken)
+		router.Post("/change-password", controllers.ChangePassword)
 	})
 
 	micro.Get("/users/me", middleware.DeserializeUser, controllers.GetMe)

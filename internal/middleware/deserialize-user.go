@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"fmt"
+	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
-	"github.com/wpcodevo/golang-fiber-jwt/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 )
 
@@ -24,7 +24,7 @@ func DeserializeUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "You are not logged in"})
 	}
 
-	config, _ := initializers.LoadConfig(".")
+	config, _ := initializers2.LoadConfig(".")
 
 	tokenByte, err := jwt.Parse(tokenString, func(jwtToken *jwt.Token) (interface{}, error) {
 		if _, ok := jwtToken.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -44,7 +44,7 @@ func DeserializeUser(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	initializers.DB.First(&user, "id = ?", fmt.Sprint(claims["sub"]))
+	initializers2.DB.First(&user, "id = ?", fmt.Sprint(claims["sub"]))
 
 	if user.ID.String() != claims["sub"] {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"status": "fail", "message": "the user belonging to this token no logger exists"})
