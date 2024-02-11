@@ -40,6 +40,10 @@ func main() {
 		router.Post("/confirm", controllers.ConfirmUser)
 		router.Post("/refresh", controllers.RefreshAccessToken)
 		router.Post("/change-password", controllers.ChangePassword)
+		router.Get("/verify-email", controllers.VerifyEmail)
+		router.Post("/reset-password-request", controllers.ResetPasswordRequest)
+		router.Post("/reset-password-verify", controllers.ResetPasswordVerify)
+		router.Post("/reset-password", controllers.ResetPassword)
 	})
 
 	micro.Get("/users/me", middleware.DeserializeUser, controllers.GetMe)

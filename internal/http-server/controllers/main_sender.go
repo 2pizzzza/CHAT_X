@@ -6,13 +6,35 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
-	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"strings"
 
 	"net/smtp"
 )
 
+// link
+func VerifyEmail(c *fiber.Ctx) error {
+	// Получаем параметр из URL (например, уникальный код подтверждения email)
+	confirmationLink := c.Query("link")
+
+	// Находим пользователя по уникальному коду подтверждения
+	var user models.User
+	if err := initializers.DB.Where("confirmation_link = ?", confirmationLink).First(&user).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "Invalid confirmation link"})
+	}
+
+	// Устанавливаем флаг Verified в true
+	user.Verified = true
+	if err := initializers.DB.Save(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to verify email"})
+	}
+
+	// Возвращаем сообщение об успешном подтверждении email
+	return c.Status(fiber.StatusOK).SendFile("../../template/verifie.html")
+}
+
+// code
 func ConfirmUser(c *fiber.Ctx) error {
 	var confirmation struct {
 		Code string `json:"code"`
@@ -36,7 +58,7 @@ func ConfirmUser(c *fiber.Ctx) error {
 	user.Verified = true
 	user.ConfirmationCode = ""
 
-	if err := initializers2.DB.Save(&user).Error; err != nil {
+	if err := initializers.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user"})
 	}
 
@@ -52,7 +74,7 @@ func getUserFromToken(c *fiber.Ctx) (models.User, error) {
 	token = strings.ReplaceAll(token, "Bearer ", "")
 	claims := jwt.MapClaims{}
 
-	config, err := initializers2.LoadConfig(".")
+	config, err := initializers.LoadConfig(".")
 	if err != nil {
 		return models.User{}, err
 	}
@@ -70,7 +92,7 @@ func getUserFromToken(c *fiber.Ctx) (models.User, error) {
 	}
 
 	var user models.User
-	if err := initializers2.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := initializers.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return models.User{}, err
 	}
 
@@ -87,7 +109,7 @@ func sendVerificationEmail(email, code string) error {
         <h1 style="text-align: center;">Email Verification Code</h1>
         <p style="text-align: center; font-size: 20px;">Your verification code is:</p>
         <div style="text-align: center; font-size: 30px; border: 2px solid #000; padding: 10px; margin: 20px;">
-            <strong>` + code + `</strong>
+            <a href="http://localhost:8000/api/auth/verify-email?link=` + code + `">кодддд<a/>
         </div>
     </body>
     </html>

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"strings"
 	"time"
@@ -38,8 +39,14 @@ func SignUpUser(c *fiber.Ctx) error {
 		Password: string(hashedPassword),
 		Photo:    &payload.Photo,
 	}
-
+	confirmationLink := generateVerificationCode()
+	newUser.ConfirmationLink = confirmationLink
 	result := initializers2.DB.Create(&newUser)
+
+	if err := sendVerificationEmail(newUser.Email, confirmationLink); err != nil {
+		// В случае ошибки отправки письма можно обработать ее соответствующим образом
+		fmt.Println("Error sending confirmation email:", err)
+	}
 
 	if result.Error != nil && strings.Contains(result.Error.Error(), "duplicate key value violates unique") {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"status": "fail", "message": "User with that email already exists"})
@@ -47,18 +54,18 @@ func SignUpUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Something bad happened"})
 	}
 
-	verificationCode := generateVerificationCode()
-
-	// Отправка письма с кодом подтверждения на email
-	err = sendVerificationEmail(newUser.Email, verificationCode)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to send verification email"})
-	}
-	newUser.ConfirmationCode = verificationCode
-	result = initializers2.DB.Save(&newUser)
-	if result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user record"})
-	}
+	//verificationCode := generateVerificationCode()
+	//
+	//// Отправка письма с кодом подтверждения на email
+	//err = sendVerificationEmail(newUser.Email, verificationCode)
+	//if err != nil {
+	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to send verification email"})
+	//}
+	//newUser.ConfirmationCode = verificationCode
+	//result = initializers2.DB.Save(&newUser)
+	//if result.Error != nil {
+	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user record"})
+	//}
 
 	accessToken, refreshToken, err := jwt_utils.GenerateTokens(newUser.ID)
 	if err != nil {

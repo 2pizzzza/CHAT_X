@@ -8,17 +8,20 @@ import (
 )
 
 type User struct {
-	ID               *uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-	Name             string     `gorm:"type:varchar(100);not null"`
-	Email            string     `gorm:"type:varchar(100);uniqueIndex;not null"`
-	Password         string     `gorm:"type:varchar(100);not null"`
-	Role             *string    `gorm:"type:varchar(50);default:'user';not null"`
-	Provider         *string    `gorm:"type:varchar(50);default:'local';not null"`
-	Photo            *string    `gorm:"not null;default:'default.png'"`
-	Verified         bool       `gorm:"not null;default:false"`
-	ConfirmationCode string     `gorm:"type:varchar(20);"`
-	CreatedAt        *time.Time `gorm:"not null;default:now()"`
-	UpdatedAt        *time.Time `gorm:"not null;default:now()"`
+	ID                  *uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+	Name                string     `gorm:"type:varchar(100);not null"`
+	Email               string     `gorm:"type:varchar(100);uniqueIndex;not null"`
+	Password            string     `gorm:"type:varchar(100);not null"`
+	Role                *string    `gorm:"type:varchar(50);default:'user';not null"`
+	Provider            *string    `gorm:"type:varchar(50);default:'local';not null"`
+	Photo               *string    `gorm:"not null;default:'default.png'"`
+	Verified            bool       `gorm:"not null;default:false"`
+	ConfirmationCode    string     `gorm:"type:varchar(20);"`
+	ConfirmationLink    string     `gorm:"type:varchar(20);"`
+	ResetPasswordCode   string     `gorm:"type:varchar(20);"`
+	ResetPasswordExpiry time.Time  `gorm:""`
+	CreatedAt           *time.Time `gorm:"not null;default:now()"`
+	UpdatedAt           *time.Time `gorm:"not null;default:now()"`
 }
 
 type SignUpInput struct {
