@@ -15,26 +15,21 @@ import (
 
 // link
 func VerifyEmail(c *fiber.Ctx) error {
-	// Получаем параметр из URL (например, уникальный код подтверждения email)
 	confirmationLink := c.Query("link")
 
-	// Находим пользователя по уникальному коду подтверждения
 	var user models.User
 	if err := initializers.DB.Where("confirmation_link = ?", confirmationLink).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "Invalid confirmation link"})
 	}
 
-	// Устанавливаем флаг Verified в true
 	user.Verified = true
 	if err := initializers.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to verify email"})
 	}
 
-	// Возвращаем сообщение об успешном подтверждении email
 	return c.Status(fiber.StatusOK).SendFile("../../template/verifie.html")
 }
 
-// code
 func ConfirmUser(c *fiber.Ctx) error {
 	var confirmation struct {
 		Code string `json:"code"`
@@ -43,18 +38,15 @@ func ConfirmUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": err.Error()})
 	}
 
-	// Извлечение пользователя из JWT токена
 	user, err := getUserFromToken(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Unauthorized"})
 	}
 
-	// Проверяем, соответствует ли код подтверждения коду пользователя
 	if user.ConfirmationCode != confirmation.Code {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "Invalid confirmation code"})
 	}
 
-	// Обновляем поле Verified и удаляем код подтверждения
 	user.Verified = true
 	user.ConfirmationCode = ""
 
@@ -102,7 +94,6 @@ func sendVerificationEmail(email, code string) error {
 	auth := smtp.PlainAuth("", "eligdigital@gmail.com", "dqwqqgtxbbuwobgt", "smtp.gmail.com")
 	to := []string{email}
 
-	// Форматирование HTML письма
 	htmlMsg := `
     <html>
     <body>
@@ -115,7 +106,6 @@ func sendVerificationEmail(email, code string) error {
     </html>
     `
 
-	// Отправка письма
 	err := smtp.SendMail("smtp.gmail.com:587", auth, "eligdigital@gmail.com", to, []byte(
 		"From: eligdigital@gmail.com\r\n"+
 			"To: "+email+"\r\n"+

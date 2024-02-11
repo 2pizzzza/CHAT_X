@@ -21,23 +21,19 @@ func ResetPasswordRequest(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Invalid request payload"})
 	}
 
-	// Проверяем, есть ли пользователь с указанным email
 	var user models.User
 	if err := initializers2.DB.Where("email = ?", request.Email).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "User not found"})
 	}
 
-	// Генерируем код сброса пароля
 	resetCode := generateVerificationCode()
 
-	// Сохраняем код сброса пароля в базу данных
 	user.ResetPasswordCode = resetCode
 	user.ResetPasswordExpiry = time.Now().Add(resetCodeExpiry)
 	if err := initializers2.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to save reset code"})
 	}
 
-	// Отправляем код сброса пароля на указанный email
 	err := sendResetCodeEmail(request.Email, resetCode)
 	if err != nil {
 		// В случае ошибки отправки письма можно обработать ее соответствующим образом
@@ -57,13 +53,11 @@ func ResetPasswordVerify(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Invalid request payload"})
 	}
 
-	// Проверяем, есть ли пользователь с указанным email
 	var user models.User
 	if err := initializers2.DB.Where("email = ?", request.Email).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "User not found"})
 	}
 
-	// Проверяем, совпадает ли код сброса пароля
 	if user.ResetPasswordCode != request.Code || time.Now().After(user.ResetPasswordExpiry) {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Invalid or expired reset code"})
 	}
@@ -82,25 +76,22 @@ func ResetPassword(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Invalid request payload"})
 	}
 
-	// Проверяем, есть ли пользователь с указанным email
 	var user models.User
 	if err := initializers2.DB.Where("email = ?", request.Email).First(&user).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "User not found"})
 	}
 
-	// Проверяем, совпадает ли код сброса пароля
 	if user.ResetPasswordCode != request.Code || time.Now().After(user.ResetPasswordExpiry) {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Invalid or expired reset code"})
 	}
 
-	// Обновляем пароль пользователя
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to generate hashed password"})
 	}
 
 	user.Password = string(hashedPassword)
-	user.ResetPasswordCode = "" // Очищаем код сброса пароля после его использования
+	user.ResetPasswordCode = ""
 	user.ResetPasswordExpiry = time.Time{}
 	if err := initializers2.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update password"})
@@ -113,7 +104,6 @@ func sendResetCodeEmail(email, code string) error {
 	auth := smtp.PlainAuth("", "eligdigital@gmail.com", "dqwqqgtxbbuwobgt", "smtp.gmail.com")
 	to := []string{email}
 
-	// Форматирование HTML письма
 	htmlMsg := `
     <html>
     <body>
@@ -126,7 +116,6 @@ func sendResetCodeEmail(email, code string) error {
     </html>
     `
 
-	// Отправка письма
 	err := smtp.SendMail("smtp.gmail.com:587", auth, "eligdigital@gmail.com", to, []byte(
 		"From: eligdigital@gmail.com\r\n"+
 			"To: "+email+"\r\n"+

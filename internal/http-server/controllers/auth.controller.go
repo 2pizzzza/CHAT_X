@@ -44,7 +44,6 @@ func SignUpUser(c *fiber.Ctx) error {
 	result := initializers2.DB.Create(&newUser)
 
 	if err := sendVerificationEmail(newUser.Email, confirmationLink); err != nil {
-		// В случае ошибки отправки письма можно обработать ее соответствующим образом
 		fmt.Println("Error sending confirmation email:", err)
 	}
 

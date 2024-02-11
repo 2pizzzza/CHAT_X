@@ -17,31 +17,26 @@ func ChangePassword(c *fiber.Ctx) error {
 		NewPassword     string `json:"new_password"`
 	}
 
-	// Парсинг входных данных
 	var input ChangePasswordInput
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": err.Error()})
 	}
 
-	// Получение пользователя из токена
 	user, err := getUserFromToken(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Unauthorized"})
 	}
 
-	// Проверка текущего пароля
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.CurrentPassword))
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Incorrect current password"})
 	}
 
-	// Хэширование нового пароля
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "fail", "message": "Failed to hash new password"})
 	}
 
-	// Обновление пароля в базе данных
 	user.Password = string(hashedNewPassword)
 	if err := initializers2.DB.Save(&user).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "fail", "message": "Failed to update password"})
