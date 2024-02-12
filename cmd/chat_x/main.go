@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
-	initializers "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
