@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
@@ -33,20 +33,20 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	micro.Route("/auth", func(router fiber.Router) {
-		router.Post("/register", controllers.SignUpUser)
-		router.Post("/login", controllers.SignInUser)
-		router.Get("/logout", middleware.DeserializeUser, controllers.LogoutUser)
-		router.Post("/confirm", controllers.ConfirmUser)
-		router.Post("/refresh", controllers.RefreshAccessToken)
-		router.Post("/change-password", controllers.ChangePassword)
-		router.Get("/verify-email", controllers.VerifyEmail)
-		router.Post("/reset-password-request", controllers.ResetPasswordRequest)
-		router.Post("/reset-password-verify", controllers.ResetPasswordVerify)
-		router.Post("/reset-password", controllers.ResetPassword)
+	micro.Route("/auth-controllers", func(router fiber.Router) {
+		router.Post("/register", auth_controllers.SignUpUser)
+		router.Post("/login", auth_controllers.SignInUser)
+		router.Get("/logout", middleware.DeserializeUser, auth_controllers.LogoutUser)
+		router.Post("/confirm", auth_controllers.ConfirmUser)
+		router.Post("/refresh", auth_controllers.RefreshAccessToken)
+		router.Post("/change-password", auth_controllers.ChangePassword)
+		router.Get("/verify-email", auth_controllers.VerifyEmail)
+		router.Post("/reset-password-request", auth_controllers.ResetPasswordRequest)
+		router.Post("/reset-password-verify", auth_controllers.ResetPasswordVerify)
+		router.Post("/reset-password", auth_controllers.ResetPassword)
 	})
 
-	micro.Get("/users/me", middleware.DeserializeUser, controllers.GetMe)
+	micro.Get("/users/me", middleware.DeserializeUser, auth_controllers.GetMe)
 
 	micro.Get("/healthchecker", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{

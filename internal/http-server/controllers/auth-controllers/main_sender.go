@@ -1,4 +1,4 @@
-package controllers
+package auth_controllers
 
 import (
 	"crypto/rand"
@@ -100,7 +100,7 @@ func sendVerificationEmail(email, code string) error {
         <h1 style="text-align: center;">Email Verification Code</h1>
         <p style="text-align: center; font-size: 20px;">Your verification code is:</p>
         <div style="text-align: center; font-size: 30px; border: 2px solid #000; padding: 10px; margin: 20px;">
-            <a href="http://localhost:8000/api/auth/verify-email?link=` + code + `">кодддд<a/>
+            <a href="http://localhost:8000/api/auth-controllers/verify-email?link=` + code + `">кодддд<a/>
         </div>
     </body>
     </html>
