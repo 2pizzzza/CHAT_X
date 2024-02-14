@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
-	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
-	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
-	"log"
-
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
+	chat_controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/chat-controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"log"
 )
 
 func init() {
@@ -33,7 +34,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	micro.Route("/auth-controllers", func(router fiber.Router) {
+	micro.Route("/auth", func(router fiber.Router) {
 		router.Post("/register", auth_controllers.SignUpUser)
 		router.Post("/login", auth_controllers.SignInUser)
 		router.Get("/logout", middleware.DeserializeUser, auth_controllers.LogoutUser)
@@ -53,6 +54,18 @@ func main() {
 			"status":  "success",
 			"message": "JWT Authentication with Golang, Fiber, and GORM",
 		})
+	})
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	micro.Route("/chat", func(router fiber.Router) {
+		router.Post("/messages", middleware.DeserializeUser, chat_controllers.CreateMessage)
+
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {

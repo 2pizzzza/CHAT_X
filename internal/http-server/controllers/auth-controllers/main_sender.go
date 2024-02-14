@@ -38,7 +38,7 @@ func ConfirmUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": err.Error()})
 	}
 
-	user, err := getUserFromToken(c)
+	user, err := GetUserFromToken(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Unauthorized"})
 	}
@@ -57,7 +57,7 @@ func ConfirmUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "User confirmed successfully"})
 }
 
-func getUserFromToken(c *fiber.Ctx) (models.User, error) {
+func GetUserFromToken(c *fiber.Ctx) (models.User, error) {
 	token := c.Get("Authorization")
 	if token == "" {
 		return models.User{}, errors.New("missing token")

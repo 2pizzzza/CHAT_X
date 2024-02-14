@@ -2,7 +2,7 @@ package auth_controllers
 
 import (
 	"fmt"
-	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"strings"
 	"time"
 
@@ -41,7 +41,7 @@ func SignUpUser(c *fiber.Ctx) error {
 	}
 	confirmationLink := generateVerificationCode()
 	newUser.ConfirmationLink = confirmationLink
-	result := initializers2.DB.Create(&newUser)
+	result := initializers.DB.Create(&newUser)
 
 	if err := sendVerificationEmail(newUser.Email, confirmationLink); err != nil {
 		fmt.Println("Error sending confirmation email:", err)
@@ -61,7 +61,7 @@ func SignUpUser(c *fiber.Ctx) error {
 	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to send verification email"})
 	//}
 	//newUser.ConfirmationCode = verificationCode
-	//result = initializers2.DB.Save(&newUser)
+	//result = initializers.DB.Save(&newUser)
 	//if result.Error != nil {
 	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user record"})
 	//}
@@ -88,7 +88,7 @@ func SignInUser(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	result := initializers2.DB.First(&user, "email = ?", strings.ToLower(payload.Email))
+	result := initializers.DB.First(&user, "email = ?", strings.ToLower(payload.Email))
 	if result.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": "Invalid email or Password"})
 	}
@@ -102,7 +102,7 @@ func SignInUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
-	config, err := initializers2.LoadConfig(".")
+	config, err := initializers.LoadConfig(".")
 	c.Cookie(&fiber.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
