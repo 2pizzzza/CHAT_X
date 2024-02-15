@@ -2,6 +2,7 @@ package chat_controllers
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	auth_controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
@@ -9,12 +10,6 @@ import (
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"gorm.io/gorm"
 )
-
-type CreateMessageInput struct {
-	RecipientID     uuid.UUID `json:"recipient_id" validate:"required"`
-	Text            string    `json:"text" validate:"required"`
-	ParentMessageID *uint     `json:"parent_message_id,omitempty"`
-}
 
 func CreateMessage(c *fiber.Ctx) error {
 	token := c.Get("Authorization")
@@ -31,10 +26,11 @@ func CreateMessage(c *fiber.Ctx) error {
 		RecipientID *uuid.UUID `json:"recipient_id"`
 		Text        string     `json:"text"`
 	}
+
 	if err := c.BodyParser(&reqBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
 	}
-
+	fmt.Print(reqBody.RecipientID)
 	chat := &models.Chat{}
 	result := initializers.DB.Where("(user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)",
 		user.ID, reqBody.RecipientID, reqBody.RecipientID, user.ID).First(&chat)
