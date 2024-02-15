@@ -63,9 +63,7 @@ func main() {
 		return fiber.ErrUpgradeRequired
 	})
 	go runHub()
-	//app.Get("/ws/:id", websocket.New(chat_controllers.HandleChatWebSocket))
-	// WebSocket route
-	// WebSocket route
+
 	app.Get("/ws/:chatID", websocket.New(func(c *websocket.Conn) {
 		chatID := c.Params("chatID")
 		fmt.Println(chatID)
@@ -93,7 +91,6 @@ func main() {
 			}
 		}
 
-		// Read messages from the client
 		for {
 			messageType, message, err := c.ReadMessage()
 			if err != nil {
