@@ -68,11 +68,11 @@ func main() {
 	})
 	go chat_controllers.RunHub()
 
-	app.Get("/ws/:chatID", websocket.New(chat_controllers.HandlerWebSocketChat))
-
 	micro.Route("/chat", func(router fiber.Router) {
 		router.Post("/messages", middleware.DeserializeUser, chat_controllers.CreateMessage)
-		router.Post("/delete-messages", chat_controllers.DeleteMessage)
+		router.Post("/delete-messages", middleware.DeserializeUser, chat_controllers.DeleteMessage)
+		router.Get("/ws/:chatID", websocket.New(chat_controllers.HandlerWebSocketChat))
+		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {

@@ -47,14 +47,12 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 		}
 	}
 
-	// Создание канала для сигналов для этого чата
 	SignalChannels[chatID] = make(chan bool)
 	chatSignals[chatID] = SignalChannels[chatID]
 
 	for {
 		select {
 		case <-SignalChannels[chatID]:
-			// Отправка предыдущих 50 сообщений
 			offset += pageSize
 			var prevMessages []models.Message
 			if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Offset(offset).Limit(pageSize).Find(&prevMessages).Error; err != nil {

@@ -7,8 +7,6 @@ import (
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 )
 
-// DeleteMessageHandler обрабатывает запрос на удаление сообщения.
-// DeleteMessageHandler обрабатывает запрос на удаление сообщения.
 func DeleteMessage(c *fiber.Ctx) error {
 	// Проверка аутентификации
 	token := c.Get("Authorization")
@@ -21,7 +19,6 @@ func DeleteMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
 
-	// Парсинг параметров запроса
 	var params struct {
 		MessageIDs []uint `json:"message_ids"`
 	}
@@ -29,7 +26,6 @@ func DeleteMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request payload"})
 	}
 
-	// Проверка, что пользователь может удалить только свои сообщения
 	messages := []*models.Message{}
 	if result := initializers.DB.Where("user_id = ? AND id IN (?)", user.ID, params.MessageIDs).Find(&messages); result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch messages"})
@@ -39,7 +35,6 @@ func DeleteMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "User can only delete their own messages"})
 	}
 
-	// Удаление сообщений
 	if result := initializers.DB.Where("id IN (?)", params.MessageIDs).Delete(&models.Message{}); result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to delete messages"})
 	}
