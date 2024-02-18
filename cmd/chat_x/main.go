@@ -74,6 +74,7 @@ func main() {
 		router.Get("/ws/:chatID", websocket.New(chat_controllers.HandlerWebSocketChat))
 		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
 		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
+		router.Get("/get-all-chat", chat_controllers.GetAllChatsByUser)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
