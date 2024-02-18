@@ -1,62 +1,139 @@
 package chat_controllers
 
 import (
-	"errors"
-	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-	auth_controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
-	"gorm.io/gorm"
+	"log"
+	"time"
 )
 
-func CreateMessage(c *fiber.Ctx) error {
-	token := c.Get("Authorization")
-	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
+func HandlerWebSocketChat(c *websocket.Conn) {
+	chatID := c.Params("chatID")
+
+	defer func() {
+		unregister <- c
+		c.Close()
+	}()
+
+	register <- c
+
+	log.Printf("WebSocket connection established for chat ID %s", chatID)
+
+	var lastMessageID uint
+	var offset int
+	const pageSize = 50
+
+	var lastMessage models.Message
+	if err := initializers.DB.Where("chat_id = ?", chatID).Order("id desc").First(&lastMessage).Error; err != nil {
+		log.Println("failed to get last message:", err)
+		return
+	}
+	lastMessageID = lastMessage.ID
+
+	// Отправка последних 50 сообщений
+	var messages []models.Message
+	if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Limit(pageSize).Find(&messages).Error; err != nil {
+		log.Println("failed to load messages:", err)
+		return
 	}
 
-	user, err := auth_controllers.GetUserFromToken(c)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-
-	var reqBody struct {
-		RecipientID *uuid.UUID `json:"recipient_id"`
-		Text        string     `json:"text"`
-	}
-
-	if err := c.BodyParser(&reqBody); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request body"})
-	}
-	fmt.Print(reqBody.RecipientID)
-	chat := &models.Chat{}
-	result := initializers.DB.Where("(user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)",
-		user.ID, reqBody.RecipientID, reqBody.RecipientID, user.ID).First(&chat)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		newChat := &models.Chat{
-			User1ID: user.ID,
-			User2ID: reqBody.RecipientID,
+	for i := len(messages) - 1; i >= 0; i-- {
+		message := messages[i]
+		responseMessage := models.FilterMessageRecord(&message)
+		if err := c.WriteJSON(responseMessage); err != nil {
+			log.Println("failed to send message:", err)
+			continue
 		}
-		result := initializers.DB.Create(&newChat)
-		if result.Error != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Error creating chat"})
+	}
+
+	// Создание канала для сигналов для этого чата
+	SignalChannels[chatID] = make(chan bool)
+	chatSignals[chatID] = SignalChannels[chatID]
+
+	for {
+		select {
+		case <-SignalChannels[chatID]:
+			// Отправка предыдущих 50 сообщений
+			offset += pageSize
+			var prevMessages []models.Message
+			if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Offset(offset).Limit(pageSize).Find(&prevMessages).Error; err != nil {
+				log.Println("failed to load previous messages:", err)
+				continue
+			}
+
+			for i := len(prevMessages) - 1; i >= 0; i-- {
+				message := prevMessages[i]
+				responseMessage := models.FilterMessageRecord(&message)
+				if err := c.WriteJSON(responseMessage); err != nil {
+					log.Println("failed to send message:", err)
+					continue
+				}
+			}
+		default:
+			for {
+				var newMessages []models.Message
+				if err := initializers.DB.Where("chat_id = ? AND id > ?", chatID, lastMessageID).Order("id asc").Limit(pageSize).Find(&newMessages).Error; err != nil {
+					log.Println("failed to load new messages:", err)
+					continue
+				}
+
+				for _, message := range newMessages {
+					responseMessage := models.FilterMessageRecord(&message)
+					if err := c.WriteJSON(responseMessage); err != nil {
+						log.Println("failed to send new message:", err)
+						continue
+					}
+				}
+
+				if len(newMessages) > 0 {
+					lastMessageID = newMessages[len(newMessages)-1].ID
+				}
+
+				time.Sleep(5 * time.Second)
+			}
 		}
-		chat = newChat
-	} else if result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Error finding chat"})
 	}
+}
 
-	message := &models.Message{
-		UserID: user.ID,
-		ChatID: chat.ID,
-		Text:   reqBody.Text,
-	}
-	result = initializers.DB.Create(&message)
-	if result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Error creating message"})
-	}
+type client struct{}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Message created successfully", "data": message})
+type ChatSignal struct {
+	ChatID string
+	Signal chan bool
+}
+
+var SignalChannels = make(map[string]chan bool)
+var chatSignals = make(map[string]chan bool)
+
+var clients = make(map[*websocket.Conn]client)
+var register = make(chan *websocket.Conn)
+var broadcast = make(chan models.ResponseMessage)
+var unregister = make(chan *websocket.Conn)
+
+func RunHub() {
+	for {
+		select {
+		case connection := <-register:
+			clients[connection] = client{}
+			log.Println("connection registered")
+
+		case message := <-broadcast:
+			log.Println("message received:", message)
+
+			for connection := range clients {
+				if err := connection.WriteJSON(message); err != nil {
+					log.Println("write error:", err)
+
+					unregister <- connection
+					connection.WriteMessage(websocket.CloseMessage, []byte{})
+					connection.Close()
+				}
+			}
+
+		case connection := <-unregister:
+			delete(clients, connection)
+			log.Println("connection unregistered")
+		}
+	}
 }
