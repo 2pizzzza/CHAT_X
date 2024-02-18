@@ -24,6 +24,7 @@ type Message struct {
 	ChatID          uint
 	ParentMessage   *Message `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
+	Read            bool `gorm:"default:false"`
 	Text            string
 	CreatedAt       time.Time `gorm:"autoCreateTime"`
 	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
@@ -33,7 +34,9 @@ type ResponseMessage struct {
 	UserID          uuid.UUID `json:"user_id,omitempty"`
 	ChatID          uint      `json:"chat_id,omitempty"`
 	ParentMessageID *uint     `json:"parent_message_id,omitempty"`
+	ParentMessage   *Message  `json:"parent_message,omitempty"`
 	Text            string    `json:"text,omitempty"`
+	Username        string    `json:"username,omitempty"`
 	CreatedAt       time.Time `json:"created_at,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
@@ -48,6 +51,7 @@ type ResponseChat struct {
 }
 
 func FilterMessageRecord(message *Message) ResponseMessage {
+
 	return ResponseMessage{
 		ID:              message.ID,
 		UserID:          *message.UserID,

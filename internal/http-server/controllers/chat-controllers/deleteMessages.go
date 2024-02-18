@@ -2,7 +2,7 @@ package chat_controllers
 
 import (
 	"github.com/gofiber/fiber/v2"
-	auth_controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 )

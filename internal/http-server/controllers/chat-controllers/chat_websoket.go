@@ -31,7 +31,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 	}
 	lastMessageID = lastMessage.ID
 
-	// Отправка последних 50 сообщений
 	var messages []models.Message
 	if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Limit(pageSize).Find(&messages).Error; err != nil {
 		log.Println("failed to load messages:", err)
@@ -88,7 +87,7 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 					lastMessageID = newMessages[len(newMessages)-1].ID
 				}
 
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 			}
 		}
 	}

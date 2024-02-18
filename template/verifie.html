@@ -4,29 +4,92 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <title>WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .message {
+            margin: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            background-color: #f1f1f1;
+        }
+
+        .message.sent {
+            background-color: #e2f3f5;
+            text-align: right;
+        }
+
+        .message.received {
+            background-color: #f1f1f1;
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
-<div id="messages"></div>
+<div id="chat"></div>
+<input type="text" id="messageInput" placeholder="Type your message...">
+<button onclick="sendMessage()">Send</button>
 
 <script>
-    const socket = new WebSocket("ws://localhost:8080/ws/1"); // Replace "3" with the actual chat ID
-    const messagesDiv = document.getElementById("messages");
+    const socket = new WebSocket("ws://localhost:8000/api/chat/ws/1");
 
-    socket.onopen = function(event) {
-        console.log("WebSocket connection opened");
+    socket.onopen = () => {
+        console.log("WebSocket connection established");
     };
 
-    socket.onmessage = function(event) {
+    socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
-        const messageElement = document.createElement("p");
-        messageElement.textContent = `${message.text} (${new Date(message.createdAt).toLocaleString()})`;
-        messagesDiv.appendChild(messageElement);
+        console.log("Received message:", message);
+        displayMessage(message);
     };
 
-    socket.onclose = function(event) {
-        console.log("WebSocket connection closed");
-    };
+    function displayMessage(message) {
+        const chat = document.getElementById("chat");
+        const div = document.createElement("div");
+        div.className = "message " + (message.user_id === "e43f1f37-82f0-4254-b2c1-b52d40a15d50" ? "sent" : "received");
+        div.textContent = message.text;
+        chat.appendChild(div);
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const text = messageInput.value;
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgyNTQ3NDYsImlhdCI6MTcwODI1MTE0NiwibmJmIjoxNzA4MjUxMTQ2LCJzdWIiOiJlNDNmMWYzNy04MmYwLTQyNTQtYjJjMS1iNTJkNDBhMTVkNTAifQ.-MblLA1zdNRBQoSzm2KRZBlBdN7hlVmubkH7Cpw3Abw'; // Замените на ваш токен
+        const recipientId = 'e43f1f37-82f0-4254-b2c1-b52d40a15d50'; // ID получателя
+        fetch('http://localhost:8000/api/chat/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                recipient_id: recipientId,
+                text: text
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+                console.log('Message sent successfully');
+                // Отправка сообщения через сокет
+                const message = {
+                    type: 'new_message',
+                    text: text
+                };
+                socket.send(JSON.stringify(message));
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+            });
+        messageInput.value = "";
+    }
 </script>
 </body>
 </html>

@@ -73,6 +73,7 @@ func main() {
 		router.Post("/delete-messages", middleware.DeserializeUser, chat_controllers.DeleteMessage)
 		router.Get("/ws/:chatID", websocket.New(chat_controllers.HandlerWebSocketChat))
 		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
+		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
