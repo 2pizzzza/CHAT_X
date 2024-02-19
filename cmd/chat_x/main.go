@@ -6,8 +6,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
-	chat_controllers "github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/chat-controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/chat-controllers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/group-controller"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
@@ -18,13 +20,16 @@ func init() {
 	if err != nil {
 		log.Fatalln("Failed to load environment variables! \n", err.Error())
 	}
+
 	initializers.ConnectDB(&config)
+
 }
 
 func main() {
 	app := fiber.New()
 	micro := fiber.New()
-
+	app.Use(logger.New())
+	app.Use(requestid.New())
 	app.Mount("/api", micro)
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
@@ -75,6 +80,11 @@ func main() {
 		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
 		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
 		router.Get("/get-all-chat", chat_controllers.GetAllChatsByUser)
+	})
+
+	micro.Route("/group", func(router fiber.Router) {
+		router.Post("/create-group", group_controller.CreateGroup)
+		router.Post("/add-new-participant", group_controller.AddParticipantToGroup)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {

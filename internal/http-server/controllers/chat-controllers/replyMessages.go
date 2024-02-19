@@ -13,11 +13,11 @@ func ReplyToMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
 
+	// Получаем пользователя из токена
 	user, err := auth_controllers.GetUserFromToken(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
-
 	// Парсинг параметров запроса
 	var params struct {
 		ChatID          uint   `json:"chat_id"`

@@ -13,6 +13,8 @@ type Config struct {
 	DBName         string `mapstructure:"POSTGRES_DB"`
 	DBPort         string `mapstructure:"POSTGRES_PORT"`
 
+	ENV string `mapstructure:"ENV"`
+
 	JwtSecret             string        `mapstructure:"JWT_SECRET"`
 	JwtExpiresIn          time.Duration `mapstructure:"JWT_EXPIRED_IN"`
 	JwtMaxAge             int           `mapstructure:"JWT_MAXAGE"`
