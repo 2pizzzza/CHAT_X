@@ -70,7 +70,6 @@ func FilterGroupMessageRecord(GroupMessage *GroupMessage) GroupMessageResponse {
 	return GroupMessageResponse{
 		ID:              GroupMessage.ID,
 		GroupID:         GroupMessage.GroupID,
-		User:            FilterUserRecord(GroupMessage.User),
 		ParentMessageID: GroupMessage.ParentMessageID,
 		Read:            GroupMessage.Read,
 		Text:            GroupMessage.Text,

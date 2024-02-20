@@ -10,6 +10,7 @@ import (
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/auth-controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/chat-controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/group-controller"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/group-controller/messages"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
@@ -88,6 +89,7 @@ func main() {
 		router.Post("/add-new-participant", group_controller.AddParticipantToGroup)
 		router.Post("/delete-participant", group_controller.RemoveParticipant)
 		router.Post("/added-new-admin", group_controller.AddAdmin)
+		router.Post("/create-messages-group", messages.CreateGroupMessage)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
