@@ -90,6 +90,7 @@ func main() {
 		router.Post("/delete-participant", group_controller.RemoveParticipant)
 		router.Post("/added-new-admin", group_controller.AddAdmin)
 		router.Post("/create-messages-group", messages.CreateGroupMessage)
+		router.Post("/delete-messages", messages.DeleteGroupMessages)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
