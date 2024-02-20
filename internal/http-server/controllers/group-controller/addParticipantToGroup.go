@@ -54,6 +54,5 @@ func AddParticipantToGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to add participant to group"})
 	}
 
-	// Возвращаем успешный ответ
 	return c.JSON(fiber.Map{"message": "Participant added successfully"})
 }
