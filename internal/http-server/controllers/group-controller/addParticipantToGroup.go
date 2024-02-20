@@ -32,7 +32,7 @@ func AddParticipantToGroup(c *fiber.Ctx) error {
 	if err := initializers.DB.Preload("Admins").Where("id = ?", addParticipantRequest.GroupID).First(&group).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Group not found"})
 	}
-
+	fmt.Println(group.Participants)
 	isAdmin := false
 	for _, admin := range group.Admins {
 		if admin.ID.String() == user.ID.String() {
