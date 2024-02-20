@@ -25,7 +25,6 @@ func GetAllChatsByUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch chats"})
 	}
 
-	// Формирование ответа
 	var responseChats []models.ResponseChat
 	for _, chat := range chats {
 		responseChat := models.FilterChatRecord(&chat)

@@ -58,5 +58,5 @@ func CreateMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Error creating message"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Message created successfully", "data": message})
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"message": "Message created successfully", "data": message, "user": user, "chat": chat})
 }

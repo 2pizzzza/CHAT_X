@@ -20,7 +20,7 @@ type Message struct {
 	ID              uint       `gorm:"primaryKey"`
 	User            *User      `gorm:"foreignKey:UserID"`
 	UserID          *uuid.UUID `gorm:"type:uuid"`
-	Chat            *Chat      `gorm:"foreignKey:ChatID"`
+	Chat            Chat       `gorm:"foreignKey:ChatID"`
 	ChatID          uint
 	ParentMessage   *Message `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
@@ -30,15 +30,16 @@ type Message struct {
 	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
 }
 type ResponseMessage struct {
-	ID              uint      `json:"id,omitempty"`
-	UserID          uuid.UUID `json:"user_id,omitempty"`
-	ChatID          uint      `json:"chat_id,omitempty"`
-	ParentMessageID *uint     `json:"parent_message_id,omitempty"`
-	ParentMessage   *Message  `json:"parent_message,omitempty"`
-	Text            string    `json:"text,omitempty"`
-	Username        string    `json:"username,omitempty"`
-	CreatedAt       time.Time `json:"created_at,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
+	ID              uint         `json:"id,omitempty"`
+	UserID          uuid.UUID    `json:"user_id,omitempty"`
+	User            UserResponse `json:"user,omitempty"`
+	ChatID          uint         `json:"chat_id,omitempty"`
+	ParentMessageID *uint        `json:"parent_message_id,omitempty"`
+	ParentMessage   *Message     `json:"parent_message,omitempty"`
+	Text            string       `json:"text,omitempty"`
+	Username        string       `json:"username,omitempty"`
+	CreatedAt       time.Time    `json:"created_at,omitempty"`
+	UpdatedAt       time.Time    `json:"updated_at,omitempty"`
 }
 
 type ResponseChat struct {
@@ -56,6 +57,7 @@ func FilterMessageRecord(message *Message) ResponseMessage {
 		ID:              message.ID,
 		UserID:          *message.UserID,
 		ChatID:          message.ChatID,
+		User:            FilterUserRecord(message.User),
 		ParentMessageID: message.ParentMessageID,
 		Text:            message.Text,
 		CreatedAt:       message.CreatedAt,
