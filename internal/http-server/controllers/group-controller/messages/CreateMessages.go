@@ -8,7 +8,6 @@ import (
 )
 
 func CreateGroupMessage(c *fiber.Ctx) error {
-	// Проверяем авторизацию пользователя
 	token := c.Get("Authorization")
 	if token == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
@@ -19,7 +18,6 @@ func CreateGroupMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
 
-	// Парсим данные из запроса
 	var createMessageRequest struct {
 		GroupID uint   `json:"group_id"`
 		Text    string `json:"text"`
@@ -28,7 +26,6 @@ func CreateGroupMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request"})
 	}
 
-	// Проверяем, является ли текущий пользователь участником группы
 	var group models.Group
 	if err := initializers.DB.Preload("Participants").Where("id = ?", createMessageRequest.GroupID).First(&group).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Group not found"})
@@ -46,7 +43,6 @@ func CreateGroupMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Only group participants can create messages"})
 	}
 
-	// Создаем новое сообщение в группе
 	newMessage := &models.GroupMessage{
 		GroupID: createMessageRequest.GroupID,
 		UserID:  user.ID,
@@ -57,6 +53,5 @@ func CreateGroupMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to create message"})
 	}
 
-	// Возвращаем успешный ответ
 	return c.JSON(fiber.Map{"messages": "Message created successfully", "message": models.FilterGroupMessageRecord(newMessage)})
 }

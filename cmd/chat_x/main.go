@@ -83,7 +83,7 @@ func main() {
 		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
 		router.Get("/get-all-chat", chat_controllers.GetAllChatsByUser)
 	})
-
+	go messages.RunHubGroup()
 	micro.Route("/group", func(router fiber.Router) {
 		router.Post("/create-group", group_controller.CreateGroup)
 		router.Post("/add-new-participant", group_controller.AddParticipantToGroup)
@@ -94,6 +94,7 @@ func main() {
 		router.Put("/change-messages", messages.UpdateGroupMessage)
 		router.Get("/get-all-group", group_controller.GetUserGroups)
 		router.Post("/reply-messages", messages.ReplyToGroupMessage)
+		router.Get("/ws/:GroupId", websocket.New(messages.HandlerWebSocketGroupMessages))
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
