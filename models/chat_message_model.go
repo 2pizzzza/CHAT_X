@@ -57,7 +57,6 @@ func FilterMessageRecord(message *Message) ResponseMessage {
 		ID:              message.ID,
 		UserID:          *message.UserID,
 		ChatID:          message.ChatID,
-		User:            FilterUserRecord(message.User),
 		ParentMessageID: message.ParentMessageID,
 		Text:            message.Text,
 		CreatedAt:       message.CreatedAt,

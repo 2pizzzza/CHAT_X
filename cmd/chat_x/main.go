@@ -92,6 +92,7 @@ func main() {
 		router.Post("/create-messages-group", messages.CreateGroupMessage)
 		router.Post("/delete-messages", messages.DeleteGroupMessages)
 		router.Put("/change-messages", messages.UpdateGroupMessage)
+		router.Get("/get-all-group", group_controller.GetUserGroups)
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {
