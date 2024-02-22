@@ -90,6 +90,7 @@ func GetUserFromToken(c *fiber.Ctx) (models.User, error) {
 
 	return user, nil
 }
+
 func sendVerificationEmail(email, code string) error {
 	auth := smtp.PlainAuth("", "eligdigital@gmail.com", "dqwqqgtxbbuwobgt", "smtp.gmail.com")
 	to := []string{email}

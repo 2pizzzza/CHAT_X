@@ -48,5 +48,5 @@ func ReplyToGroupMessage(c *fiber.Ctx) error {
 	}
 
 	// Возвращаем успешный ответ
-	return c.JSON(fiber.Map{"message": "Reply message created successfully", "messages": models.FilterGroupMessageRecord(reply), "user": models.FilterUserRecord(&user), "parent": models.FilterGroupMessageRecord(&parentMessage)})
+	return c.JSON(fiber.Map{"message": "Reply message created successfully", "messages": models.FilterGroupMessageRecord(reply), "user": models.FilterUserRecord(&user), "parent": parentMessage})
 }

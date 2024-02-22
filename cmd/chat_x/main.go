@@ -94,7 +94,7 @@ func main() {
 		router.Put("/change-messages", messages.UpdateGroupMessage)
 		router.Get("/get-all-group", group_controller.GetUserGroups)
 		router.Post("/reply-messages", messages.ReplyToGroupMessage)
-		router.Get("/ws/:GroupId", websocket.New(messages.HandlerWebSocketGroupMessages))
+		router.Get("/ws/:GroupID", websocket.New(messages.HandlerWebSocketGroupMessages))
 	})
 
 	micro.All("*", func(c *fiber.Ctx) error {

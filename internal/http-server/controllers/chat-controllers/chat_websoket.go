@@ -39,6 +39,8 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
+		message.Read = true
+		initializers.DB.Save(&message)
 		responseMessage := models.FilterMessageRecord(&message)
 		if err := c.WriteJSON(responseMessage); err != nil {
 			log.Println("failed to send message:", err)
@@ -61,6 +63,8 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 
 			for i := len(prevMessages) - 1; i >= 0; i-- {
 				message := prevMessages[i]
+				message.Read = true
+				initializers.DB.Save(&message)
 				responseMessage := models.FilterMessageRecord(&message)
 				if err := c.WriteJSON(responseMessage); err != nil {
 					log.Println("failed to send message:", err)
@@ -76,6 +80,8 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 				}
 
 				for _, message := range newMessages {
+					message.Read = true
+					initializers.DB.Save(&message)
 					responseMessage := models.FilterMessageRecord(&message)
 					if err := c.WriteJSON(responseMessage); err != nil {
 						log.Println("failed to send new message:", err)

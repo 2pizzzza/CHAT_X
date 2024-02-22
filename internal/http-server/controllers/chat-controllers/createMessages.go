@@ -50,6 +50,7 @@ func CreateMessage(c *fiber.Ctx) error {
 
 	message := &models.Message{
 		UserID: user.ID,
+		User:   &user,
 		ChatID: chat.ID,
 		Text:   reqBody.Text,
 	}

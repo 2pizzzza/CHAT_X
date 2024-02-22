@@ -1,7 +1,6 @@
 package messages
 
 import (
-	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
@@ -10,7 +9,7 @@ import (
 )
 
 func HandlerWebSocketGroupMessages(c *websocket.Conn) {
-	groupID := c.Params("GroupId")
+	groupID := c.Params("GroupID")
 
 	defer func() {
 		unregister <- c
@@ -18,7 +17,6 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 	}()
 
 	register <- c
-	fmt.Println(groupID)
 
 	log.Printf("WebSocket connection established for group ID %s", groupID)
 
@@ -41,7 +39,9 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 
 	for i := len(messages) - 1; i >= 0; i-- {
 		message := messages[i]
-		responseMessage := models.FilterGroupMessageRecord(&message)
+		responseMessage := message
+		message.Read = true
+		initializers.DB.Save(&message)
 		if err := c.WriteJSON(responseMessage); err != nil {
 			log.Println("failed to send message:", err)
 			continue
@@ -78,6 +78,8 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 				}
 
 				for _, message := range newMessages {
+					message.Read = true
+					initializers.DB.Save(&message)
 					responseMessage := models.FilterGroupMessageRecord(&message)
 					if err := c.WriteJSON(responseMessage); err != nil {
 						log.Println("failed to send new message:", err)
