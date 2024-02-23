@@ -11,6 +11,7 @@ import (
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/chat-controllers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/group-controller"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/group-controller/messages"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/http-server/controllers/sticker"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/middleware"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"log"
@@ -97,6 +98,9 @@ func main() {
 		router.Get("/ws/:GroupID", websocket.New(messages.HandlerWebSocketGroupMessages))
 	})
 
+	micro.Route("/sticker", func(router fiber.Router) {
+		router.Post("/create", sticker.UploadStickers)
+	})
 	micro.All("*", func(c *fiber.Ctx) error {
 		path := c.Path()
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

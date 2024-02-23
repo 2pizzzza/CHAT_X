@@ -24,7 +24,9 @@ type Message struct {
 	ChatID          uint
 	ParentMessage   *Message `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
-	Read            bool `gorm:"default:false"`
+	StickerID       uint
+	Sticker         Sticker `gorm:"foreignKey:StickerID"`
+	Read            bool    `gorm:"default:false"`
 	Text            string
 	CreatedAt       time.Time `gorm:"autoCreateTime"`
 	UpdatedAt       time.Time `gorm:"autoUpdateTime"`

@@ -30,7 +30,9 @@ func ConnectDB(config *Config) {
 	DB.Logger = logger.Default.LogMode(logger.Silent)
 
 	log.Println("Running Migrations")
-	err = DB.AutoMigrate(&models.User{}, &models.Chat{}, &models.GroupMessage{}, &models.Message{}, &models.Group{})
+	err = DB.AutoMigrate(&models.StickerPack{}, &models.Sticker{}, &models.User{}, &models.Chat{}, &models.GroupMessage{}, &models.Message{},
+		&models.Group{})
+
 	if err != nil {
 		log.Fatal("Migration Failed:  \n", err.Error())
 		os.Exit(1)

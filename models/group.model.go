@@ -26,6 +26,8 @@ type GroupMessage struct {
 	UserID          *uuid.UUID `gorm:"type:uuid"`
 	ParentMessage   *Message   `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
+	StickerID       uint
+	Sticker         Sticker   `gorm:"foreignKey:StickerID"`
 	Read            bool      `gorm:"default:false"`
 	Text            string    `gorm:"not null"`
 	CreatedAt       time.Time `gorm:"autoCreateTime"`
