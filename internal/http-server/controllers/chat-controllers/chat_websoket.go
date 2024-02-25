@@ -2,22 +2,19 @@ package chat_controllers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gofiber/contrib/websocket"
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/utills/jwt_utils"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
+	"gorm.io/gorm"
 	"log"
-	"log/slog"
 	"strconv"
-	"strings"
 )
 
 func HandlerWebSocketChat(c *websocket.Conn) {
 	chatID := c.Params("chatID")
-	// Проверяем JWT токен
-	claims, err := validateToken(c)
+	claims, err := jwt_utils.ValidateToken(c)
 	if err != nil {
 		log.Println("failed to validate token:", err.Error())
 		c.Close()
@@ -25,8 +22,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 	}
 
 	userID := claims["sub"].(string)
-	fmt.Println(userID)
-	// Определяем пользователя из базы данных
 	var user models.User
 	if err := initializers.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		log.Println("failed to get user:", err)
@@ -47,12 +42,22 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 	const pageSize = 50
 
 	var lastMessage models.Message
+	if err := initializers.DB.Where("chat_id = ?", chatID).First(&lastMessage).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println("no messages in this chat")
+			return
+		}
+		log.Println("failed to get last message:", err)
+		return
+	}
+
 	if err := initializers.DB.Where("chat_id = ?", chatID).Order("id desc").First(&lastMessage).Error; err != nil {
 		log.Println("failed to get last message:", err)
 		return
 	}
 
 	var messages []models.Message
+
 	if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Limit(pageSize).Find(&messages).Error; err != nil {
 		log.Println("failed to load messages:", err)
 		return
@@ -128,7 +133,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 			parentMessageIDUint := uint(parentMessageIDInt)
 			chatIDUint := uint(chatIDInt)
 
-			// Create a new Message record
 			message := models.Message{
 				UserID:          &userUUID,
 				ChatID:          chatIDUint,
@@ -147,35 +151,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 			broadcast <- responseMessage
 		}
 	}
-}
-
-func validateToken(c *websocket.Conn) (jwt.MapClaims, error) {
-	tokenString := c.Headers("Authorization")
-	config, err := initializers.LoadConfig(".")
-	jwtSecret := config.JwtSecret
-	if err != nil {
-		slog.Error("error load config is", err)
-	}
-	if tokenString == "" {
-		return nil, errors.New("authorization header is missing")
-	}
-
-	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtSecret), nil
-	})
-	if err != nil {
-
-		return nil, err
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
-	}
-
-	return claims, nil
 }
 
 type client struct{}

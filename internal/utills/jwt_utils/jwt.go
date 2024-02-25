@@ -1,15 +1,19 @@
 package jwt_utils
 
 import (
+	"errors"
 	"fmt"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	initializers2 "github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
+	"log/slog"
+	"strings"
 	"time"
 )
 
 func GenerateTokens(userID *uuid.UUID) (string, string, error) {
-	config, err := initializers2.LoadConfig(".")
+	config, err := initializers.LoadConfig(".")
 	if err != nil {
 		return "", "", err
 	}
@@ -38,4 +42,33 @@ func GenerateTokens(userID *uuid.UUID) (string, string, error) {
 	}
 
 	return accessTokenString, refreshTokenString, nil
+}
+
+func ValidateToken(c *websocket.Conn) (jwt.MapClaims, error) {
+	tokenString := c.Headers("Authorization")
+	config, err := initializers.LoadConfig(".")
+	jwtSecret := config.JwtSecret
+	if err != nil {
+		slog.Error("error load config is", err)
+	}
+	if tokenString == "" {
+		return nil, errors.New("authorization header is missing")
+	}
+
+	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtSecret), nil
+	})
+	if err != nil {
+
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }

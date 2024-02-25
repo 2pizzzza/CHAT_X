@@ -58,14 +58,14 @@ func FilterGroupRecord(group *Group) GroupResponse {
 }
 
 type GroupMessageResponse struct {
-	ID              uint         `json:"id,omitempty"`
-	GroupID         uint         `json:"group_id,omitempty"`
-	User            UserResponse `json:"user,omitempty"`
-	ParentMessageID *uint        `json:"parent_message_id,omitempty"`
-	Read            bool         `json:"read"`
-	Text            string       `json:"text,omitempty"`
-	CreatedAt       time.Time    `json:"created_at"`
-	UpdatedAt       time.Time    `json:"updated_at"`
+	ID              uint          `json:"id,omitempty"`
+	GroupID         uint          `json:"group_id,omitempty"`
+	User            *UserResponse `json:"user,omitempty"`
+	ParentMessageID *uint         `json:"parent_message_id,omitempty"`
+	Read            bool          `json:"read"`
+	Text            string        `json:"text,omitempty"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
 }
 
 func FilterGroupMessageRecord(GroupMessage *GroupMessage) GroupMessageResponse {
