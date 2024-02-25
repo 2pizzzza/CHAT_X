@@ -1,15 +1,38 @@
 package chat_controllers
 
 import (
+	"errors"
+	"fmt"
 	"github.com/gofiber/contrib/websocket"
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"log"
-	"time"
+	"log/slog"
+	"strconv"
+	"strings"
 )
 
 func HandlerWebSocketChat(c *websocket.Conn) {
 	chatID := c.Params("chatID")
+	// Проверяем JWT токен
+	claims, err := validateToken(c)
+	if err != nil {
+		log.Println("failed to validate token:", err.Error())
+		c.Close()
+		return
+	}
+
+	userID := claims["sub"].(string)
+	fmt.Println(userID)
+	// Определяем пользователя из базы данных
+	var user models.User
+	if err := initializers.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		log.Println("failed to get user:", err)
+		c.Close()
+		return
+	}
 
 	defer func() {
 		unregister <- c
@@ -20,7 +43,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 
 	log.Printf("WebSocket connection established for chat ID %s", chatID)
 
-	var lastMessageID uint
 	var offset int
 	const pageSize = 50
 
@@ -29,7 +51,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 		log.Println("failed to get last message:", err)
 		return
 	}
-	lastMessageID = lastMessage.ID
 
 	var messages []models.Message
 	if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Limit(pageSize).Find(&messages).Error; err != nil {
@@ -72,31 +93,89 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 				}
 			}
 		default:
-			for {
-				var newMessages []models.Message
-				if err := initializers.DB.Where("chat_id = ? AND id > ?", chatID, lastMessageID).Order("id asc").Limit(pageSize).Find(&newMessages).Error; err != nil {
-					log.Println("failed to load new messages:", err)
-					continue
-				}
-
-				for _, message := range newMessages {
-					message.Read = true
-					initializers.DB.Save(&message)
-					responseMessage := models.FilterMessageRecord(&message)
-					if err := c.WriteJSON(responseMessage); err != nil {
-						log.Println("failed to send new message:", err)
-						continue
-					}
-				}
-
-				if len(newMessages) > 0 {
-					lastMessageID = newMessages[len(newMessages)-1].ID
-				}
-
-				time.Sleep(1 * time.Second)
+			var request map[string]interface{}
+			if err := c.ReadJSON(&request); err != nil {
+				log.Println("failed to read message:", err)
+				continue
 			}
+
+			text, ok := request["text"].(string)
+			if !ok {
+				log.Println("invalid text format")
+				continue
+			}
+
+			parentMessageID, ok := request["parentMessage"].(string)
+			if !ok {
+				log.Println("invalid parentMessage format", ok)
+				continue
+			}
+			userUUID, err := uuid.Parse(userID)
+			if err != nil {
+				log.Println("failed to parse user UUID:", err)
+				continue
+			}
+			chatIDInt, err := strconv.ParseUint(chatID, 10, 32)
+			if err != nil {
+				log.Println("failed to parse chat ID:", err)
+				continue
+			}
+			parentMessageIDInt, err := strconv.ParseUint(parentMessageID, 10, 32)
+			if err != nil {
+				log.Println("failed to parse chat ID:", err)
+				continue
+			}
+			parentMessageIDUint := uint(parentMessageIDInt)
+			chatIDUint := uint(chatIDInt)
+
+			// Create a new Message record
+			message := models.Message{
+				UserID:          &userUUID,
+				ChatID:          chatIDUint,
+				Text:            text,
+				ParentMessageID: &parentMessageIDUint,
+			}
+
+			// Save the message to the database
+			if err := initializers.DB.Create(&message).Error; err != nil {
+				log.Println("failed to save message:", err)
+				continue
+			}
+
+			// Send the new message to all connected clients
+			responseMessage := models.FilterMessageRecord(&message)
+			broadcast <- responseMessage
 		}
 	}
+}
+
+func validateToken(c *websocket.Conn) (jwt.MapClaims, error) {
+	tokenString := c.Headers("Authorization")
+	config, err := initializers.LoadConfig(".")
+	jwtSecret := config.JwtSecret
+	if err != nil {
+		slog.Error("error load config is", err)
+	}
+	if tokenString == "" {
+		return nil, errors.New("authorization header is missing")
+	}
+
+	tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtSecret), nil
+	})
+	if err != nil {
+
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }
 
 type client struct{}

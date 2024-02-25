@@ -27,7 +27,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to verify email"})
 	}
 
-	return c.Status(fiber.StatusOK).SendFile("../../template/verifie.html")
+	return c.Status(fiber.StatusOK).SendString("your account is verifie")
 }
 
 func ConfirmUser(c *fiber.Ctx) error {

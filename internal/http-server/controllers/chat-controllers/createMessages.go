@@ -50,12 +50,12 @@ func CreateMessage(c *fiber.Ctx) error {
 
 	message := &models.Message{
 		UserID: user.ID,
-		User:   &user,
 		ChatID: chat.ID,
 		Text:   reqBody.Text,
 	}
 	result = initializers.DB.Create(&message)
 	if result.Error != nil {
+		fmt.Println(result.Error)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Error creating message"})
 	}
 

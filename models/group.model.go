@@ -19,14 +19,14 @@ type Group struct {
 }
 
 type GroupMessage struct {
-	ID              uint       `gorm:"primaryKey"`
-	GroupID         uint       `gorm:"not null"`
-	Group           *Group     `gorm:"foreignKey:GroupID"`
-	User            *User      `gorm:"foreignKey:UserID"`
-	UserID          *uuid.UUID `gorm:"type:uuid"`
-	ParentMessage   *Message   `gorm:"foreignKey:ParentMessageID"`
+	ID              uint          `gorm:"primaryKey"`
+	GroupID         uint          `gorm:"not null"`
+	Group           *Group        `gorm:"foreignKey:GroupID"`
+	User            *User         `gorm:"foreignKey:UserID"`
+	UserID          *uuid.UUID    `gorm:"type:uuid"`
+	ParentMessage   *GroupMessage `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
-	StickerID       uint
+	StickerID       *uint
 	Sticker         Sticker   `gorm:"foreignKey:StickerID"`
 	Read            bool      `gorm:"default:false"`
 	Text            string    `gorm:"not null"`
