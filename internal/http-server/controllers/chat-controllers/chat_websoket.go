@@ -2,6 +2,7 @@ package chat_controllers
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
@@ -104,51 +105,116 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 				continue
 			}
 
-			text, ok := request["text"].(string)
+			messageType, ok := request["type"].(string)
 			if !ok {
-				log.Println("invalid text format")
+				log.Println("invalid message type")
 				continue
 			}
 
-			parentMessageID, ok := request["parentMessage"].(string)
-			if !ok {
-				log.Println("invalid parentMessage format", ok)
-				continue
-			}
-			userUUID, err := uuid.Parse(userID)
-			if err != nil {
-				log.Println("failed to parse user UUID:", err)
-				continue
-			}
-			chatIDInt, err := strconv.ParseUint(chatID, 10, 32)
-			if err != nil {
-				log.Println("failed to parse chat ID:", err)
-				continue
-			}
-			parentMessageIDInt, err := strconv.ParseUint(parentMessageID, 10, 32)
-			if err != nil {
-				log.Println("failed to parse chat ID:", err)
-				continue
-			}
-			parentMessageIDUint := uint(parentMessageIDInt)
-			chatIDUint := uint(chatIDInt)
+			switch messageType {
+			case "message":
+				// Отправка нового сообщения
+				text, ok := request["text"].(string)
+				if !ok {
+					log.Println("invalid text format")
+					continue
+				}
 
-			message := models.Message{
-				UserID:          &userUUID,
-				ChatID:          chatIDUint,
-				Text:            text,
-				ParentMessageID: &parentMessageIDUint,
-			}
+				var parentMessageIDUint uint
+				if parentMessage, ok := request["parentMessage"].(string); ok && parentMessage != "" {
+					parentMessageUint, err := strconv.ParseUint(parentMessage, 10, 32)
+					if err != nil {
+						log.Println("invalid parentMessage format", err)
+						continue
+					}
+					parentMessageIDUint = uint(parentMessageUint)
+				}
 
-			// Save the message to the database
-			if err := initializers.DB.Create(&message).Error; err != nil {
-				log.Println("failed to save message:", err)
-				continue
-			}
+				userUUID, err := uuid.Parse(userID)
+				if err != nil {
+					log.Println("failed to parse user UUID:", err)
+					continue
+				}
+				chatIDInt, err := strconv.ParseUint(chatID, 10, 32)
+				if err != nil {
+					log.Println("failed to parse chat ID:", err)
+					continue
+				}
 
-			// Send the new message to all connected clients
-			responseMessage := models.FilterMessageRecord(&message)
-			broadcast <- responseMessage
+				chatIDUint := uint(chatIDInt)
+				var message models.Message
+
+				if parentMessageIDUint > 0 {
+					message = models.Message{
+						UserID:          &userUUID,
+						ChatID:          chatIDUint,
+						Text:            text,
+						ParentMessageID: &parentMessageIDUint,
+					}
+				} else {
+					message = models.Message{
+						UserID: &userUUID,
+						ChatID: chatIDUint,
+						Text:   text,
+					}
+				}
+
+				if err := initializers.DB.Create(&message).Error; err != nil {
+					log.Println("failed to save message:", err)
+					continue
+				}
+
+				responseMessage := models.FilterMessageRecord(&message)
+				broadcast <- responseMessage
+
+			case "reaction":
+				operation, ok := request["operation"].(string)
+				if !ok {
+					log.Println("invalid operation format")
+					continue
+				}
+				switch operation {
+				case "add":
+					emoji, ok := request["emoji"].(string)
+					if !ok {
+						fmt.Println(emoji)
+						log.Println("invalid emoji format")
+						continue
+					}
+					messageID, ok := request["messageID"].(string)
+					if !ok {
+						log.Println("invalid messageID format")
+						continue
+					}
+
+					message, err := AddReaction(userID, messageID, emoji)
+					if err != nil {
+						log.Println("failed to add reaction:", err)
+						continue
+					}
+					updateMessage := models.FilterMessageRecord(message)
+					broadcast <- updateMessage
+
+				case "remove":
+					reactionID, ok := request["reactionID"].(string)
+					if !ok {
+						log.Println("invalid reactionID format")
+						continue
+					}
+
+					message, err := RemoveReaction(userID, reactionID)
+					if err != nil {
+						log.Println("failed to remove reaction:", err, message)
+						continue
+					}
+
+					updatedMessage := models.FilterMessageRecord(message)
+					broadcast <- updatedMessage
+
+				default:
+					log.Println("unsupported operation:", operation)
+				}
+			}
 		}
 	}
 }
@@ -193,4 +259,99 @@ func RunHub() {
 			log.Println("connection unregistered")
 		}
 	}
+}
+
+func AddReaction(userID, messageID string, emoji string) (*models.Message, error) {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	messageIDUint, err := strconv.ParseUint(messageID, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	var existingReaction models.ChatReaction
+	if err := initializers.DB.Where("user_id = ? AND message_id = ?", userUUID, messageIDUint).First(&existingReaction).Error; err != nil {
+		// Если реакции от пользователя на это сообщение нет, создаем новую реакцию
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			reaction := models.ChatReaction{
+				Emoji:     emoji,
+				UserID:    &userUUID,
+				MessageID: uint(messageIDUint),
+			}
+			if err := initializers.DB.Create(&reaction).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		existingReaction.Emoji = emoji
+		if err := initializers.DB.Save(&existingReaction).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	var message models.Message
+	if err := initializers.DB.Where("id = ?", messageIDUint).Preload("Reactions").First(&message).Error; err != nil {
+		return nil, err
+	}
+
+	reactionExists := false
+	for _, reaction := range message.Reactions {
+		if reaction.UserID.String() == userID {
+			reaction.Emoji = emoji
+			reactionExists = true
+			break
+		}
+	}
+
+	if !reactionExists {
+		reaction := models.ChatReaction{
+			Emoji:     emoji,
+			UserID:    &userUUID,
+			MessageID: uint(messageIDUint),
+		}
+		message.Reactions = append(message.Reactions, &reaction)
+	}
+
+	if err := initializers.DB.Save(&message).Error; err != nil {
+		return nil, err
+	}
+
+	return &message, nil
+}
+
+func RemoveReaction(userID, reactionID string) (*models.Message, error) {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	reactionIDUint, err := strconv.ParseUint(reactionID, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	var reaction models.ChatReaction
+	if err := initializers.DB.Where("id = ? AND user_id = ?", reactionIDUint, userUUID).First(&reaction).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Delete(&reaction).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Delete(&models.ChatReaction{}, reactionID).Error; err != nil {
+		return nil, err
+	}
+
+	var updatedMessage models.Message
+	if err := initializers.DB.Where("id = ?", reaction.MessageID).Preload("Reactions").First(&updatedMessage).Error; err != nil {
+		return nil, err
+	}
+
+	return &updatedMessage, nil
 }

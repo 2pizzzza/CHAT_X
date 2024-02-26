@@ -1,12 +1,14 @@
 package messages
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/internal/utills/jwt_utils"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
+	"gorm.io/gorm"
 	"log"
 	"strconv"
 )
@@ -98,59 +100,116 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 				continue
 			}
 
-			text, ok := request["text"].(string)
+			messageType, ok := request["type"].(string)
 			if !ok {
-				log.Println("invalid text format")
+				log.Println("invalid message type")
 				continue
 			}
 
-			var parentMessageIDUint uint
-			if parentMessage, ok := request["parentMessage"].(string); ok && parentMessage != "" {
-				parentMessageUint, err := strconv.ParseUint(parentMessage, 10, 32)
-				if err != nil {
-					log.Println("invalid parentMessage format", err)
+			switch messageType {
+			case "message":
+				// Отправка нового сообщения
+				text, ok := request["text"].(string)
+				if !ok {
+					log.Println("invalid text format")
 					continue
 				}
-				parentMessageIDUint = uint(parentMessageUint)
-			}
-			fmt.Println(parentMessageIDUint)
 
-			userUUID, err := uuid.Parse(userID)
-			if err != nil {
-				log.Println("failed to parse user UUID:", err)
-				continue
-			}
-			chatIDInt, err := strconv.ParseUint(groupID, 10, 32)
-			if err != nil {
-				log.Println("failed to parse chat ID:", err)
-				continue
-			}
-
-			chatIDUint := uint(chatIDInt)
-			var message models.GroupMessage
-
-			if parentMessageIDUint > 0 {
-				message = models.GroupMessage{
-					UserID:          &userUUID,
-					GroupID:         chatIDUint,
-					Text:            text,
-					ParentMessageID: &parentMessageIDUint,
+				var parentMessageIDUint uint
+				if parentMessage, ok := request["parentMessage"].(string); ok && parentMessage != "" {
+					parentMessageUint, err := strconv.ParseUint(parentMessage, 10, 32)
+					if err != nil {
+						log.Println("invalid parentMessage format", err)
+						continue
+					}
+					parentMessageIDUint = uint(parentMessageUint)
 				}
-			} else {
-				message = models.GroupMessage{
-					UserID:  &userUUID,
-					GroupID: chatIDUint,
-					Text:    text,
+
+				userUUID, err := uuid.Parse(userID)
+				if err != nil {
+					log.Println("failed to parse user UUID:", err)
+					continue
+				}
+				chatIDInt, err := strconv.ParseUint(groupID, 10, 32)
+				if err != nil {
+					log.Println("failed to parse chat ID:", err)
+					continue
+				}
+
+				chatIDUint := uint(chatIDInt)
+				var message models.GroupMessage
+
+				if parentMessageIDUint > 0 {
+					message = models.GroupMessage{
+						UserID:          &userUUID,
+						GroupID:         chatIDUint,
+						Text:            text,
+						ParentMessageID: &parentMessageIDUint,
+					}
+				} else {
+					message = models.GroupMessage{
+						UserID:  &userUUID,
+						GroupID: chatIDUint,
+						Text:    text,
+					}
+				}
+
+				if err := initializers.DB.Create(&message).Error; err != nil {
+					log.Println("failed to save message:", err)
+					continue
+				}
+
+				responseMessage := models.FilterGroupMessageRecord(&message)
+				broadcast <- responseMessage
+
+			case "reaction":
+				operation, ok := request["operation"].(string)
+				if !ok {
+					log.Println("invalid operation format")
+					continue
+				}
+				switch operation {
+				case "add":
+					emoji, ok := request["emoji"].(string)
+					if !ok {
+						fmt.Println(emoji)
+						log.Println("invalid emoji format")
+						continue
+					}
+					messageID, ok := request["messageID"].(string)
+					if !ok {
+						log.Println("invalid messageID format")
+						continue
+					}
+
+					message, err := AddReaction(userID, messageID, emoji)
+					if err != nil {
+						log.Println("failed to add reaction:", err)
+						continue
+					}
+					updateMessage := models.FilterGroupMessageRecord(message)
+					broadcast <- updateMessage
+
+				case "remove":
+					reactionID, ok := request["reactionID"].(string)
+					if !ok {
+						log.Println("invalid reactionID format")
+						continue
+					}
+
+					message, err := RemoveReaction(userID, reactionID)
+					if err != nil {
+						log.Println("failed to remove reaction:", err, message)
+						continue
+					}
+
+					updatedMessage := models.FilterGroupMessageRecord(message)
+					broadcast <- updatedMessage
+
+				default:
+					log.Println("unsupported operation:", operation)
 				}
 			}
-
-			if err := initializers.DB.Create(&message).Error; err != nil {
-				log.Println("failed to save message:", err)
-				continue
-			}
-
-			responseMessage := models.FilterGroupMessageRecord(&message)
-			broadcast <- responseMessage
 		}
 	}
 }
@@ -195,4 +254,103 @@ func RunHubGroup() {
 			log.Println("connection unregistered")
 		}
 	}
+}
+
+func AddReaction(userID, messageID string, emoji string) (*models.GroupMessage, error) {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	messageIDUint, err := strconv.ParseUint(messageID, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	var existingReaction models.Reaction
+	if err := initializers.DB.Where("user_id = ? AND message_id = ?", userUUID, messageIDUint).First(&existingReaction).Error; err != nil {
+		// Если реакции от пользователя на это сообщение нет, создаем новую реакцию
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			reaction := models.Reaction{
+				Emoji:     emoji,
+				UserID:    &userUUID,
+				MessageID: uint(messageIDUint),
+			}
+			if err := initializers.DB.Create(&reaction).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		existingReaction.Emoji = emoji
+		if err := initializers.DB.Save(&existingReaction).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	var message models.GroupMessage
+	if err := initializers.DB.Where("id = ?", messageIDUint).Preload("Reactions").First(&message).Error; err != nil {
+		return nil, err
+	}
+
+	reactionExists := false
+	for _, reaction := range message.Reactions {
+		if reaction.UserID.String() == userID {
+			reaction.Emoji = emoji
+			reactionExists = true
+			break
+		}
+	}
+
+	if !reactionExists {
+		reaction := models.Reaction{
+			Emoji:     emoji,
+			UserID:    &userUUID,
+			MessageID: uint(messageIDUint),
+		}
+		message.Reactions = append(message.Reactions, &reaction)
+	}
+
+	if err := initializers.DB.Save(&message).Error; err != nil {
+		return nil, err
+	}
+
+	return &message, nil
+}
+
+func RemoveReaction(userID, reactionID string) (*models.GroupMessage, error) {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	reactionIDUint, err := strconv.ParseUint(reactionID, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	var reaction models.Reaction
+	if err := initializers.DB.Where("id = ? AND user_id = ?", reactionIDUint, userUUID).First(&reaction).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Exec("DELETE FROM group_message_reactions WHERE group_message_id = ? AND reaction_id = ?", reaction.MessageID, reaction.ID).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Delete(&reaction).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Delete(&models.Reaction{}, reactionID).Error; err != nil {
+		return nil, err
+	}
+
+	var updatedMessage models.GroupMessage
+	if err := initializers.DB.Where("id = ?", reaction.MessageID).Preload("Reactions").First(&updatedMessage).Error; err != nil {
+		return nil, err
+	}
+
+	return &updatedMessage, nil
 }

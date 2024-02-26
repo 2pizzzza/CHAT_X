@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"time"
 )
@@ -27,12 +26,23 @@ type GroupMessage struct {
 	ParentMessage   *GroupMessage `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
 	StickerID       *uint
-	Sticker         Sticker   `gorm:"foreignKey:StickerID"`
-	Read            bool      `gorm:"default:false"`
-	Text            string    `gorm:"not null"`
-	CreatedAt       time.Time `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
+	Sticker         Sticker     `gorm:"foreignKey:StickerID"`
+	Read            bool        `gorm:"default:false"`
+	Text            string      `gorm:"not null"`
+	Reactions       []*Reaction `gorm:"many2many:group_message_reactions;"`
+	CreatedAt       time.Time   `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time   `gorm:"autoUpdateTime"`
 }
+
+type Reaction struct {
+	ID        uint       `gorm:"primaryKey"`
+	Emoji     string     `gorm:"not null"`
+	UserID    *uuid.UUID `gorm:"type:uuid;not null"`
+	MessageID uint       `gorm:"not null"`
+	CreatedAt time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
+}
+
 type GroupResponse struct {
 	ID           uint      `json:"id,omitempty"`
 	Name         string    `json:"name,omitempty"`
@@ -58,19 +68,23 @@ func FilterGroupRecord(group *Group) GroupResponse {
 }
 
 type GroupMessageResponse struct {
-	ID              uint          `json:"id,omitempty"`
-	GroupID         uint          `json:"group_id,omitempty"`
-	User            *UserResponse `json:"user,omitempty"`
-	ParentMessageID *uint         `json:"parent_message_id,omitempty"`
-	Read            bool          `json:"read"`
-	Text            string        `json:"text,omitempty"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+	ID              uint         `json:"id,omitempty"`
+	GroupID         uint         `json:"group_id,omitempty"`
+	User            UserResponse `json:"user,omitempty"`
+	UserID          uuid.UUID    `json:"user_id,omitempty"`
+	ParentMessageID *uint        `json:"parent_message_id,omitempty"`
+	ParentMessage   *Message     `json:"parent_message,omitempty"`
+	Read            bool         `json:"read"`
+	Reaction        string       `json:"reaction,omitempty"`
+	Text            string       `json:"text,omitempty"`
+	CreatedAt       time.Time    `json:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at"`
 }
 
 func FilterGroupMessageRecord(GroupMessage *GroupMessage) GroupMessageResponse {
 	return GroupMessageResponse{
 		ID:              GroupMessage.ID,
+		UserID:          *GroupMessage.UserID,
 		GroupID:         GroupMessage.GroupID,
 		ParentMessageID: GroupMessage.ParentMessageID,
 		Read:            GroupMessage.Read,
@@ -86,17 +100,17 @@ type ErrorResponses struct {
 	Value string `json:"value,omitempty"`
 }
 
-func ValidateStructs[T any](payload T) []*ErrorResponse {
-	var errors []*ErrorResponse
-	err := validate.Struct(payload)
-	if err != nil {
-		for _, err := range err.(validator.ValidationErrors) {
-			var element ErrorResponse
-			element.Field = err.StructNamespace()
-			element.Tag = err.Tag()
-			element.Value = err.Param()
-			errors = append(errors, &element)
-		}
-	}
-	return errors
-}
+//func ValidateStructs[T any](payload T) []*ErrorResponse {
+//	var errors []*ErrorResponse
+//	err := validate.Struct(payload)
+//	if err != nil {
+//		for _, err := range err.(validator.ValidationErrors) {
+//			var element ErrorResponse
+//			element.Field = err.StructNamespace()
+//			element.Tag = err.Tag()
+//			element.Value = err.Param()
+//			errors = append(errors, &element)
+//		}
+//	}
+//	return errors
+//}

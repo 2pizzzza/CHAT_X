@@ -25,12 +25,22 @@ type Message struct {
 	ParentMessage   *Message `gorm:"foreignKey:ParentMessageID"`
 	ParentMessageID *uint
 	StickerID       *uint
-	Sticker         Sticker `gorm:"foreignKey:StickerID"`
-	Read            bool    `gorm:"default:false"`
-	Text            string
-	CreatedAt       time.Time `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time `gorm:"autoUpdateTime"`
+	Sticker         Sticker         `gorm:"foreignKey:StickerID"`
+	Read            bool            `gorm:"default:false"`
+	Text            string          `gorm:"not null"`
+	Reactions       []*ChatReaction `gorm:"many2many:message_reactions;"`
+	CreatedAt       time.Time       `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time       `gorm:"autoUpdateTime"`
 }
+type ChatReaction struct {
+	ID        uint       `gorm:"primaryKey"`
+	Emoji     string     `gorm:"not null"`
+	UserID    *uuid.UUID `gorm:"type:uuid;not null"`
+	MessageID uint       `gorm:"not null"`
+	CreatedAt time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
+}
+
 type ResponseMessage struct {
 	ID              uint         `json:"id,omitempty"`
 	UserID          uuid.UUID    `json:"user_id,omitempty"`
