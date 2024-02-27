@@ -18,12 +18,12 @@ type Group struct {
 }
 
 type GroupMessage struct {
-	ID              uint          `gorm:"primaryKey"`
-	GroupID         uint          `gorm:"not null"`
-	Group           *Group        `gorm:"foreignKey:GroupID"`
-	User            *User         `gorm:"foreignKey:UserID"`
-	UserID          *uuid.UUID    `gorm:"type:uuid"`
-	ParentMessage   *GroupMessage `gorm:"foreignKey:ParentMessageID"`
+	ID              uint                 `gorm:"primaryKey"`
+	GroupID         uint                 `gorm:"not null"`
+	Group           *Group               `gorm:"foreignKey:GroupID"`
+	User            *User                `gorm:"foreignKey:UserID"`
+	UserID          *uuid.UUID           `gorm:"type:uuid"`
+	ParentMessage   *ParentMessagesGroup `gorm:"-"`
 	ParentMessageID *uint
 	StickerID       *uint
 	Sticker         Sticker     `gorm:"foreignKey:StickerID"`
@@ -39,6 +39,7 @@ type Reaction struct {
 	Emoji     string     `gorm:"not null"`
 	UserID    *uuid.UUID `gorm:"type:uuid;not null"`
 	MessageID uint       `gorm:"not null"`
+	Username  string     `json:"username,omitempty"`
 	CreatedAt time.Time  `gorm:"autoCreateTime"`
 	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
 }
@@ -68,29 +69,44 @@ func FilterGroupRecord(group *Group) GroupResponse {
 }
 
 type GroupMessageResponse struct {
-	ID              uint         `json:"id,omitempty"`
-	GroupID         uint         `json:"group_id,omitempty"`
-	User            UserResponse `json:"user,omitempty"`
-	UserID          uuid.UUID    `json:"user_id,omitempty"`
-	ParentMessageID *uint        `json:"parent_message_id,omitempty"`
-	ParentMessage   *Message     `json:"parent_message,omitempty"`
-	Read            bool         `json:"read"`
-	Reaction        string       `json:"reaction,omitempty"`
-	Text            string       `json:"text,omitempty"`
-	CreatedAt       time.Time    `json:"created_at"`
-	UpdatedAt       time.Time    `json:"updated_at"`
+	ID              uint                 `json:"id,omitempty"`
+	GroupID         uint                 `json:"group_id,omitempty"`
+	UserID          uuid.UUID            `json:"user_id,omitempty"`
+	ParentMessageID *uint                `json:"parent_message_id,omitempty"`
+	ParentMessage   *ParentMessagesGroup `json:"parent_message,omitempty"`
+	Read            bool                 `json:"read"`
+	Reaction        string               `json:"reaction,omitempty"`
+	Username        string               `json:"username,omitempty"`
+	Text            string               `json:"text,omitempty"`
+	CreatedAt       time.Time            `json:"created_at"`
+	UpdatedAt       time.Time            `json:"updated_at"`
 }
 
-func FilterGroupMessageRecord(GroupMessage *GroupMessage) GroupMessageResponse {
+type ParentMessagesGroup struct {
+	ID       uint   `json:"ID,omitempty"`
+	Username string `json:"username,omitempty"`
+	Text     string `json:"text,omitempty"`
+}
+
+func FilterGroupMessageRecord(groupMessage *GroupMessage) GroupMessageResponse {
+	var parentMessage *ParentMessagesGroup
+	if groupMessage.ParentMessage != nil {
+		parentMessage = &ParentMessagesGroup{
+			ID:       groupMessage.ParentMessage.ID,
+			Username: groupMessage.ParentMessage.Username,
+			Text:     groupMessage.ParentMessage.Text,
+		}
+	}
 	return GroupMessageResponse{
-		ID:              GroupMessage.ID,
-		UserID:          *GroupMessage.UserID,
-		GroupID:         GroupMessage.GroupID,
-		ParentMessageID: GroupMessage.ParentMessageID,
-		Read:            GroupMessage.Read,
-		Text:            GroupMessage.Text,
-		CreatedAt:       GroupMessage.CreatedAt,
-		UpdatedAt:       GroupMessage.UpdatedAt,
+		ID:              groupMessage.ID,
+		UserID:          *groupMessage.UserID,
+		GroupID:         groupMessage.GroupID,
+		ParentMessageID: groupMessage.ParentMessageID,
+		ParentMessage:   parentMessage,
+		Read:            groupMessage.Read,
+		Text:            groupMessage.Text,
+		CreatedAt:       groupMessage.CreatedAt,
+		UpdatedAt:       groupMessage.UpdatedAt,
 	}
 }
 

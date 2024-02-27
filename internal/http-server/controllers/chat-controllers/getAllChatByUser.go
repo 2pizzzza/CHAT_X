@@ -25,8 +25,42 @@ func GetAllChatsByUser(c *fiber.Ctx) error {
 
 	var responseChats []models.ResponseChat
 	for _, chat := range chats {
-		responseChat := models.FilterChatRecord(&chat)
-		responseChats = append(responseChats, responseChat)
+		var user1, user2 models.User
+		if err := initializers.DB.First(&user1, chat.User1ID).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch user1"})
+		}
+		if err := initializers.DB.First(&user2, chat.User2ID).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch user2"})
+		}
+
+		var lastMessage models.Message
+		if result := initializers.DB.Order("created_at desc").Where("chat_id = ?", chat.ID).First(&lastMessage); result.Error != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch last message"})
+		}
+		if user.ID == user1.ID {
+			responseChat := models.ResponseChat{
+				ID:          chat.ID,
+				User2Name:   user1.Name,
+				User1ID:     *user1.ID,
+				User2ID:     *user2.ID,
+				LastMessage: lastMessage.Text,
+				CreatedAt:   chat.CreatedAt,
+				UpdatedAt:   chat.UpdatedAt,
+			}
+			responseChats = append(responseChats, responseChat)
+		} else {
+			responseChat := models.ResponseChat{
+				ID:          chat.ID,
+				User1Name:   user2.Name,
+				User1ID:     *user1.ID,
+				User2ID:     *user2.ID,
+				LastMessage: lastMessage.Text,
+				CreatedAt:   chat.CreatedAt,
+				UpdatedAt:   chat.UpdatedAt,
+			}
+			responseChats = append(responseChats, responseChat)
+		}
+
 	}
 
 	return c.JSON(responseChats)

@@ -10,6 +10,7 @@ import (
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"gorm.io/gorm"
 	"log"
+	"log/slog"
 	"strconv"
 )
 
@@ -62,14 +63,41 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 
 		for i := len(messages) - 1; i >= 0; i-- {
 			message := messages[i]
-			responseMessage := message
 			message.Read = true
 			initializers.DB.Save(&message)
+			responseMessage := models.FilterGroupMessageRecord(&message)
+
+			//if message.ParentMessageID != nil {
+			//	var parentMessage models.GroupMessage
+			//	if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+			//		slog.Error("failed to get parent message:", err)
+			//	} else {
+			//		responseMessage.ParentMessageID = &parentMessage.ID
+			//		var parentUsername string
+			//		if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+			//			slog.Error("failed to get parent Username:", err)
+			//		}
+			//		responseMessage.ParentMessage = &models.ParentMessagesGroup{
+			//			ID:       parentMessage.ID,
+			//			Username: parentUsername,
+			//			Text:     parentMessage.Text,
+			//		}
+			//	}
+			//}
+			var username string
+			if err := initializers.DB.Model(&message.User).Select("name").First(&username).Error; err != nil {
+				slog.Error("failed to get username:", err)
+			}
+
+			responseMessage.Username = username
+
 			if err := c.WriteJSON(responseMessage); err != nil {
-				log.Println("failed to send message:", err)
+				slog.Error("failed, to send message:", err)
 				continue
 			}
+
 		}
+
 	}
 
 	SignalChannels[groupID] = make(chan bool)
@@ -108,7 +136,6 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 
 			switch messageType {
 			case "message":
-				// Отправка нового сообщения
 				text, ok := request["text"].(string)
 				if !ok {
 					log.Println("invalid text format")
@@ -123,6 +150,7 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 						continue
 					}
 					parentMessageIDUint = uint(parentMessageUint)
+
 				}
 
 				userUUID, err := uuid.Parse(userID)
@@ -160,6 +188,23 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 				}
 
 				responseMessage := models.FilterGroupMessageRecord(&message)
+				if message.ParentMessageID != nil {
+					var parentMessage models.GroupMessage
+					if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+						slog.Error("failed to get parent message:", err)
+					} else {
+						responseMessage.ParentMessageID = &parentMessage.ID
+						var parentUsername string
+						if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+							slog.Error("failed to get parent Username:", err)
+						}
+						responseMessage.ParentMessage = &models.ParentMessagesGroup{
+							ID:       parentMessage.ID,
+							Username: parentUsername,
+							Text:     parentMessage.Text,
+						}
+					}
+				}
 				broadcast <- responseMessage
 
 			case "reaction":

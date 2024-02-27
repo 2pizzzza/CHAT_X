@@ -69,6 +69,31 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 		message.Read = true
 		initializers.DB.Save(&message)
 		responseMessage := models.FilterMessageRecord(&message)
+
+		if message.ParentMessageID != nil {
+			var parentMessage models.Message
+			if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+				log.Println("failed to get parent message:", err)
+			} else {
+				responseMessage.ParentMessageID = &parentMessage.ID
+				var parentUsername string
+				if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+					log.Println("failed to get parent username:", err)
+				}
+				responseMessage.ParentMessage = &models.ParentMessages{
+					ID:       parentMessage.ID,
+					Username: parentUsername,
+					Text:     parentMessage.Text,
+				}
+			}
+		}
+
+		var username string
+		if err := initializers.DB.Model(&message.User).Select("name").First(&username).Error; err != nil {
+			log.Println("failed to get username:", err)
+		}
+		responseMessage.Username = username
+
 		if err := c.WriteJSON(responseMessage); err != nil {
 			log.Println("failed to send message:", err)
 			continue
@@ -113,7 +138,6 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 
 			switch messageType {
 			case "message":
-				// Отправка нового сообщения
 				text, ok := request["text"].(string)
 				if !ok {
 					log.Println("invalid text format")
@@ -128,6 +152,7 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 						continue
 					}
 					parentMessageIDUint = uint(parentMessageUint)
+					fmt.Println(parentMessageIDUint)
 				}
 
 				userUUID, err := uuid.Parse(userID)
@@ -159,12 +184,33 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 					}
 				}
 
+				if parentMessageIDUint > 0 {
+					message.ParentMessageID = &parentMessageIDUint
+				}
+				fmt.Println(message)
 				if err := initializers.DB.Create(&message).Error; err != nil {
 					log.Println("failed to save message:", err)
 					continue
 				}
 
 				responseMessage := models.FilterMessageRecord(&message)
+				if message.ParentMessageID != nil {
+					var parentMessage models.Message
+					if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+						log.Println("failed to get parent message:", err)
+					} else {
+						responseMessage.ParentMessageID = &parentMessage.ID
+						var parentUsername string
+						if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+							log.Println("failed to get parent username:", err)
+						}
+						responseMessage.ParentMessage = &models.ParentMessages{
+							ID:       parentMessage.ID,
+							Username: parentUsername,
+							Text:     parentMessage.Text,
+						}
+					}
+				}
 				broadcast <- responseMessage
 
 			case "reaction":
@@ -187,7 +233,7 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 						continue
 					}
 
-					message, err := AddReaction(userID, messageID, emoji)
+					message, err := AddReaction(userID, user.Name, messageID, emoji)
 					if err != nil {
 						log.Println("failed to add reaction:", err)
 						continue
@@ -261,7 +307,7 @@ func RunHub() {
 	}
 }
 
-func AddReaction(userID, messageID string, emoji string) (*models.Message, error) {
+func AddReaction(userID, messageID, username string, emoji string) (*models.Message, error) {
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, err
@@ -274,10 +320,10 @@ func AddReaction(userID, messageID string, emoji string) (*models.Message, error
 
 	var existingReaction models.ChatReaction
 	if err := initializers.DB.Where("user_id = ? AND message_id = ?", userUUID, messageIDUint).First(&existingReaction).Error; err != nil {
-		// Если реакции от пользователя на это сообщение нет, создаем новую реакцию
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			reaction := models.ChatReaction{
+			reaction := models.Reaction{
 				Emoji:     emoji,
+				Username:  username,
 				UserID:    &userUUID,
 				MessageID: uint(messageIDUint),
 			}
@@ -323,7 +369,6 @@ func AddReaction(userID, messageID string, emoji string) (*models.Message, error
 
 	return &message, nil
 }
-
 func RemoveReaction(userID, reactionID string) (*models.Message, error) {
 	userUUID, err := uuid.Parse(userID)
 	if err != nil {

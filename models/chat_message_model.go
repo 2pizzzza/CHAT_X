@@ -22,54 +22,79 @@ type Message struct {
 	UserID          *uuid.UUID `gorm:"type:uuid"`
 	Chat            Chat       `gorm:"foreignKey:ChatID"`
 	ChatID          uint
-	ParentMessage   *Message `gorm:"foreignKey:ParentMessageID"`
+	ParentMessage   *ParentMessages `gorm:"-"`
 	ParentMessageID *uint
 	StickerID       *uint
 	Sticker         Sticker         `gorm:"foreignKey:StickerID"`
 	Read            bool            `gorm:"default:false"`
 	Text            string          `gorm:"not null"`
-	Reactions       []*ChatReaction `gorm:"many2many:message_reactions;"`
+	Reactions       []*ChatReaction `gorm:"many2many:chat_message_reactions;"`
 	CreatedAt       time.Time       `gorm:"autoCreateTime"`
 	UpdatedAt       time.Time       `gorm:"autoUpdateTime"`
 }
+
 type ChatReaction struct {
 	ID        uint       `gorm:"primaryKey"`
 	Emoji     string     `gorm:"not null"`
 	UserID    *uuid.UUID `gorm:"type:uuid;not null"`
 	MessageID uint       `gorm:"not null"`
+	Username  string     `json:"username,omitempty"`
 	CreatedAt time.Time  `gorm:"autoCreateTime"`
 	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
 }
 
 type ResponseMessage struct {
-	ID              uint         `json:"id,omitempty"`
-	UserID          uuid.UUID    `json:"user_id,omitempty"`
-	User            UserResponse `json:"user,omitempty"`
-	ChatID          uint         `json:"chat_id,omitempty"`
-	ParentMessageID *uint        `json:"parent_message_id,omitempty"`
-	ParentMessage   *Message     `json:"parent_message,omitempty"`
-	Text            string       `json:"text,omitempty"`
-	Username        string       `json:"username,omitempty"`
-	CreatedAt       time.Time    `json:"created_at,omitempty"`
-	UpdatedAt       time.Time    `json:"updated_at,omitempty"`
+	ID              uint            `json:"id,omitempty"`
+	UserID          uuid.UUID       `json:"user_id,omitempty"`
+	User            *User           `json:"user,omitempty"`
+	ChatID          uint            `json:"chat_id,omitempty"`
+	ParentMessageID *uint           `json:"parent_message_id,omitempty"`
+	ParentMessage   *ParentMessages `json:"parent_message,omitempty"`
+	Text            string          `json:"text,omitempty"`
+	Reaction        []*ChatReaction `json:"reaction,omitempty"`
+	Read            bool            `json:"read,omitempty"`
+	Username        string          `json:"username,omitempty"`
+	CreatedAt       time.Time       `json:"created_at,omitempty"`
+	UpdatedAt       time.Time       `json:"updated_at,omitempty"`
+}
+
+type ParentMessages struct {
+	ID       uint   `json:"ID,omitempty"`
+	Username string `json:"username,omitempty"`
+	Text     string `json:"text,omitempty"`
 }
 
 type ResponseChat struct {
-	ID        uint              `json:"id,omitempty"`
-	User1ID   uuid.UUID         `json:"user1_id,omitempty"`
-	User2ID   uuid.UUID         `json:"user2_id,omitempty"`
-	Messages  []ResponseMessage `json:"messages,omitempty"`
-	CreatedAt time.Time         `json:"created_at,omitempty"`
-	UpdatedAt time.Time         `json:"updated_at,omitempty"`
+	ID          uint              `json:"id,omitempty"`
+	User1ID     uuid.UUID         `json:"user1_id,omitempty"`
+	User1Name   string            `json:"user1Name,omitempty"`
+	User2Name   string            `json:"user2Name,omitempty"`
+	LastMessage string            `json:"lastMessage,omitempty"`
+	User2ID     uuid.UUID         `json:"user2_id,omitempty"`
+	Messages    []ResponseMessage `json:"messages,omitempty"`
+	CreatedAt   time.Time         `json:"created_at,omitempty"`
+	UpdatedAt   time.Time         `json:"updated_at,omitempty"`
 }
 
 func FilterMessageRecord(message *Message) ResponseMessage {
+	var parentMessage *ParentMessages
+	if message.ParentMessage != nil {
+		parentMessage = &ParentMessages{
+			ID:       message.ParentMessage.ID,
+			Username: message.ParentMessage.Username,
+			Text:     message.ParentMessage.Text,
+		}
+	}
 
 	return ResponseMessage{
 		ID:              message.ID,
 		UserID:          *message.UserID,
+		User:            message.User,
 		ChatID:          message.ChatID,
 		ParentMessageID: message.ParentMessageID,
+		ParentMessage:   parentMessage,
+		Reaction:        message.Reactions,
+		Read:            message.Read,
 		Text:            message.Text,
 		CreatedAt:       message.CreatedAt,
 		UpdatedAt:       message.UpdatedAt,
