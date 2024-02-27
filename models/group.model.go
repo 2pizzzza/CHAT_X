@@ -15,6 +15,7 @@ type Group struct {
 	CreatedAt    time.Time       `gorm:"autoCreateTime"`
 	UpdatedAt    time.Time       `gorm:"autoUpdateTime"`
 	Message      []*GroupMessage `gorm:"foreignKey:GroupID"`
+	Target       string          `gorm:"default:personal"`
 }
 
 type GroupMessage struct {

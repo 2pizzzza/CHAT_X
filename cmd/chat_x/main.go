@@ -96,6 +96,7 @@ func main() {
 		router.Get("/get-all-group", group_controller.GetUserGroups)
 		router.Post("/reply-messages", messages.ReplyToGroupMessage)
 		router.Get("/ws/:GroupID", websocket.New(messages.HandlerWebSocketGroupMessages))
+		router.Get("/education", messages.GetAllEducationGroups)
 	})
 
 	micro.Route("/sticker", func(router fiber.Router) {
