@@ -17,11 +17,11 @@ type Chat struct {
 }
 
 type Message struct {
-	ID              uint       `gorm:"primaryKey"`
-	User            *User      `gorm:"foreignKey:UserID"`
-	UserID          *uuid.UUID `gorm:"type:uuid"`
-	Chat            Chat       `gorm:"foreignKey:ChatID"`
-	ChatID          uint
+	ID              uint            `gorm:"primaryKey"`
+	User            *User           `gorm:"foreignKey:UserID"`
+	UserID          *uuid.UUID      `gorm:"type:uuid"`
+	Chat            Chat            `gorm:"foreignKey:ChatID"`
+	ChatID          uint            `gorm:"not null"`
 	ParentMessage   *ParentMessages `gorm:"-"`
 	ParentMessageID *uint
 	StickerID       *uint
@@ -86,6 +86,19 @@ func FilterMessageRecord(message *Message) ResponseMessage {
 		}
 	}
 
+	var reactions []*ChatReaction
+	for _, reaction := range message.Reactions {
+		reactionPointer := &ChatReaction{
+			ID:        reaction.ID,
+			Emoji:     reaction.Emoji,
+			UserID:    reaction.UserID,
+			MessageID: reaction.MessageID,
+			Username:  reaction.Username,
+			CreatedAt: reaction.CreatedAt,
+			UpdatedAt: reaction.UpdatedAt,
+		}
+		reactions = append(reactions, reactionPointer)
+	}
 	return ResponseMessage{
 		ID:              message.ID,
 		UserID:          *message.UserID,
@@ -93,7 +106,7 @@ func FilterMessageRecord(message *Message) ResponseMessage {
 		ChatID:          message.ChatID,
 		ParentMessageID: message.ParentMessageID,
 		ParentMessage:   parentMessage,
-		Reaction:        message.Reactions,
+		Reaction:        reactions,
 		Read:            message.Read,
 		Text:            message.Text,
 		CreatedAt:       message.CreatedAt,

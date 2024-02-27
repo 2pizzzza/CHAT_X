@@ -42,6 +42,7 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 
 	var offset int
 	const pageSize = 150
+	var reactions []*models.Reaction
 
 	var count int64
 	if err := initializers.DB.Model(&models.GroupMessage{}).Where("group_id = ?", groupID).Count(&count).Error; err != nil {
@@ -66,24 +67,28 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 			message.Read = true
 			initializers.DB.Save(&message)
 			responseMessage := models.FilterGroupMessageRecord(&message)
-
-			//if message.ParentMessageID != nil {
-			//	var parentMessage models.GroupMessage
-			//	if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
-			//		slog.Error("failed to get parent message:", err)
-			//	} else {
-			//		responseMessage.ParentMessageID = &parentMessage.ID
-			//		var parentUsername string
-			//		if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
-			//			slog.Error("failed to get parent Username:", err)
-			//		}
-			//		responseMessage.ParentMessage = &models.ParentMessagesGroup{
-			//			ID:       parentMessage.ID,
-			//			Username: parentUsername,
-			//			Text:     parentMessage.Text,
-			//		}
-			//	}
-			//}
+			if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+				log.Println("failed to load reactions for message:", err)
+				return
+			}
+			responseMessage.Reaction = reactions
+			if message.ParentMessageID != nil {
+				var parentMessage models.GroupMessage
+				if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+					slog.Error("failed to get parent message:", err)
+				} else {
+					responseMessage.ParentMessageID = &parentMessage.ID
+					var parentUsername string
+					if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+						slog.Error("failed to get parent Username:", err)
+					}
+					responseMessage.ParentMessage = &models.ParentMessagesGroup{
+						ID:       parentMessage.ID,
+						Username: parentUsername,
+						Text:     parentMessage.Text,
+					}
+				}
+			}
 			var username string
 			if err := initializers.DB.Model(&message.User).Select("name").First(&username).Error; err != nil {
 				slog.Error("failed to get username:", err)
@@ -186,8 +191,13 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 					log.Println("failed to save message:", err)
 					continue
 				}
+				if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+					log.Println("failed to load reactions for message:", err)
+					return
+				}
 
 				responseMessage := models.FilterGroupMessageRecord(&message)
+				responseMessage.Reaction = reactions
 				if message.ParentMessageID != nil {
 					var parentMessage models.GroupMessage
 					if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
@@ -233,6 +243,28 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 						continue
 					}
 					updateMessage := models.FilterGroupMessageRecord(message)
+					if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+						log.Println("failed to load reactions for message:", err)
+						return
+					}
+					updateMessage.Reaction = reactions
+					if message.ParentMessageID != nil {
+						var parentMessage models.GroupMessage
+						if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+							slog.Error("failed to get parent message:", err)
+						} else {
+							updateMessage.ParentMessageID = &parentMessage.ID
+							var parentUsername string
+							if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+								slog.Error("failed to get parent Username:", err)
+							}
+							updateMessage.ParentMessage = &models.ParentMessagesGroup{
+								ID:       parentMessage.ID,
+								Username: parentUsername,
+								Text:     parentMessage.Text,
+							}
+						}
+					}
 					broadcast <- updateMessage
 
 				case "remove":
@@ -249,6 +281,29 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 					}
 
 					updatedMessage := models.FilterGroupMessageRecord(message)
+					if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+						log.Println("failed to load reactions for message:", err)
+						return
+					}
+					updatedMessage.Reaction = reactions
+					if message.ParentMessageID != nil {
+						var parentMessage models.GroupMessage
+						if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+							slog.Error("failed to get parent message:", err)
+						} else {
+							updatedMessage.ParentMessageID = &parentMessage.ID
+							var parentUsername string
+							if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+								slog.Error("failed to get parent Username:", err)
+							}
+							updatedMessage.ParentMessage = &models.ParentMessagesGroup{
+								ID:       parentMessage.ID,
+								Username: parentUsername,
+								Text:     parentMessage.Text,
+							}
+						}
+					}
+
 					broadcast <- updatedMessage
 
 				default:

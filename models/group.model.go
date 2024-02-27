@@ -75,7 +75,7 @@ type GroupMessageResponse struct {
 	ParentMessageID *uint                `json:"parent_message_id,omitempty"`
 	ParentMessage   *ParentMessagesGroup `json:"parent_message,omitempty"`
 	Read            bool                 `json:"read"`
-	Reaction        string               `json:"reaction,omitempty"`
+	Reaction        []*Reaction          `json:"reaction,omitempty"`
 	Username        string               `json:"username,omitempty"`
 	Text            string               `json:"text,omitempty"`
 	CreatedAt       time.Time            `json:"created_at"`
@@ -97,12 +97,28 @@ func FilterGroupMessageRecord(groupMessage *GroupMessage) GroupMessageResponse {
 			Text:     groupMessage.ParentMessage.Text,
 		}
 	}
+
+	var reactions []*Reaction
+	for _, reaction := range groupMessage.Reactions {
+		reactionPointer := &Reaction{
+			ID:        reaction.ID,
+			Emoji:     reaction.Emoji,
+			UserID:    reaction.UserID,
+			MessageID: reaction.MessageID,
+			Username:  reaction.Username,
+			CreatedAt: reaction.CreatedAt,
+			UpdatedAt: reaction.UpdatedAt,
+		}
+		reactions = append(reactions, reactionPointer)
+	}
+
 	return GroupMessageResponse{
 		ID:              groupMessage.ID,
 		UserID:          *groupMessage.UserID,
 		GroupID:         groupMessage.GroupID,
 		ParentMessageID: groupMessage.ParentMessageID,
 		ParentMessage:   parentMessage,
+		Reaction:        reactions,
 		Read:            groupMessage.Read,
 		Text:            groupMessage.Text,
 		CreatedAt:       groupMessage.CreatedAt,

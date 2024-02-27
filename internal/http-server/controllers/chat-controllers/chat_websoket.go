@@ -58,7 +58,7 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 	}
 
 	var messages []models.Message
-
+	var reactions []*models.ChatReaction
 	if err := initializers.DB.Where("chat_id = ?", chatID).Order("created_at desc").Limit(pageSize).Find(&messages).Error; err != nil {
 		log.Println("failed to load messages:", err)
 		return
@@ -70,6 +70,11 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 		initializers.DB.Save(&message)
 		responseMessage := models.FilterMessageRecord(&message)
 
+		if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+			log.Println("failed to load reactions for message:", err)
+			return
+		}
+		responseMessage.Reaction = reactions
 		if message.ParentMessageID != nil {
 			var parentMessage models.Message
 			if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
@@ -187,13 +192,17 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 				if parentMessageIDUint > 0 {
 					message.ParentMessageID = &parentMessageIDUint
 				}
-				fmt.Println(message)
 				if err := initializers.DB.Create(&message).Error; err != nil {
 					log.Println("failed to save message:", err)
 					continue
 				}
+				if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+					log.Println("failed to load reactions for message:", err)
+					return
+				}
 
 				responseMessage := models.FilterMessageRecord(&message)
+				responseMessage.Reaction = reactions
 				if message.ParentMessageID != nil {
 					var parentMessage models.Message
 					if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
@@ -233,12 +242,35 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 						continue
 					}
 
-					message, err := AddReaction(userID, user.Name, messageID, emoji)
+					message, err := AddReaction(userID, messageID, user.Name, emoji)
 					if err != nil {
 						log.Println("failed to add reaction:", err)
 						continue
 					}
+
 					updateMessage := models.FilterMessageRecord(message)
+					if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+						log.Println("failed to load reactions for message:", err)
+						return
+					}
+					updateMessage.Reaction = reactions
+					if message.ParentMessageID != nil {
+						var parentMessage models.Message
+						if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+							log.Println("failed to get parent message:", err)
+						} else {
+							updateMessage.ParentMessageID = &parentMessage.ID
+							var parentUsername string
+							if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+								log.Println("failed to get parent username:", err)
+							}
+							updateMessage.ParentMessage = &models.ParentMessages{
+								ID:       parentMessage.ID,
+								Username: parentUsername,
+								Text:     parentMessage.Text,
+							}
+						}
+					}
 					broadcast <- updateMessage
 
 				case "remove":
@@ -255,6 +287,28 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 					}
 
 					updatedMessage := models.FilterMessageRecord(message)
+					if err := initializers.DB.Model(&message).Association("Reactions").Find(&reactions); err != nil {
+						log.Println("failed to load reactions for message:", err)
+						return
+					}
+					updatedMessage.Reaction = reactions
+					if message.ParentMessageID != nil {
+						var parentMessage models.Message
+						if err := initializers.DB.Where("id = ?", *message.ParentMessageID).First(&parentMessage).Error; err != nil {
+							log.Println("failed to get parent message:", err)
+						} else {
+							updatedMessage.ParentMessageID = &parentMessage.ID
+							var parentUsername string
+							if err := initializers.DB.Model(&parentMessage.User).Select("name").First(&parentUsername).Error; err != nil {
+								log.Println("failed to get parent username:", err)
+							}
+							updatedMessage.ParentMessage = &models.ParentMessages{
+								ID:       parentMessage.ID,
+								Username: parentUsername,
+								Text:     parentMessage.Text,
+							}
+						}
+					}
 					broadcast <- updatedMessage
 
 				default:
@@ -309,6 +363,7 @@ func RunHub() {
 
 func AddReaction(userID, messageID, username string, emoji string) (*models.Message, error) {
 	userUUID, err := uuid.Parse(userID)
+	fmt.Println(username, " ya sdec")
 	if err != nil {
 		return nil, err
 	}
@@ -358,6 +413,7 @@ func AddReaction(userID, messageID, username string, emoji string) (*models.Mess
 		reaction := models.ChatReaction{
 			Emoji:     emoji,
 			UserID:    &userUUID,
+			Username:  username,
 			MessageID: uint(messageIDUint),
 		}
 		message.Reactions = append(message.Reactions, &reaction)
@@ -382,6 +438,10 @@ func RemoveReaction(userID, reactionID string) (*models.Message, error) {
 
 	var reaction models.ChatReaction
 	if err := initializers.DB.Where("id = ? AND user_id = ?", reactionIDUint, userUUID).First(&reaction).Error; err != nil {
+		return nil, err
+	}
+
+	if err := initializers.DB.Exec("DELETE FROM chat_message_reactions WHERE message_id = ? AND chat_reaction_id = ?", reaction.MessageID, reaction.ID).Error; err != nil {
 		return nil, err
 	}
 
