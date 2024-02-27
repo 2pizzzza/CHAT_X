@@ -67,6 +67,7 @@ type ParentMessages struct {
 type ResponseChat struct {
 	ID          uint              `json:"id,omitempty"`
 	User1ID     uuid.UUID         `json:"user1_id,omitempty"`
+	Name        string            `json:"name,omitempty"`
 	User1Name   string            `json:"user1Name,omitempty"`
 	User2Name   string            `json:"user2Name,omitempty"`
 	LastMessage string            `json:"lastMessage,omitempty"`
@@ -74,6 +75,7 @@ type ResponseChat struct {
 	Messages    []ResponseMessage `json:"messages,omitempty"`
 	CreatedAt   time.Time         `json:"created_at,omitempty"`
 	UpdatedAt   time.Time         `json:"updated_at,omitempty"`
+	Class       string            `json:"class,omitempty"`
 }
 
 func FilterMessageRecord(message *Message) ResponseMessage {

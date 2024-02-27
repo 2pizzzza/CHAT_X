@@ -23,5 +23,15 @@ func GetAllEducationGroups(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch education groups"})
 	}
 
+	PopulateLastMessage(groups)
 	return c.JSON(groups)
+}
+func PopulateLastMessage(groups []*models.Group) {
+	for _, group := range groups {
+		var lastMessage models.GroupMessage
+		if err := initializers.DB.Where("group_id = ?", group.ID).Order("created_at desc").First(&lastMessage).Error; err != nil {
+			continue
+		}
+		group.LastMessage = &lastMessage
+	}
 }

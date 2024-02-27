@@ -16,6 +16,7 @@ type Group struct {
 	UpdatedAt    time.Time       `gorm:"autoUpdateTime"`
 	Message      []*GroupMessage `gorm:"foreignKey:GroupID"`
 	Target       string          `gorm:"default:personal"`
+	LastMessage  *GroupMessage   `gorm:"-"`
 }
 
 type GroupMessage struct {
@@ -53,7 +54,9 @@ type GroupResponse struct {
 	Admins       []*User   `json:"admins,omitempty"`
 	Participants []*User   `json:"participants,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
+	LastMessage  string    `json:"last_message"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	Class        string    `json:"class"`
 }
 
 func FilterGroupRecord(group *Group) GroupResponse {

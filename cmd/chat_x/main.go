@@ -83,6 +83,7 @@ func main() {
 		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
 		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
 		router.Get("/get-all-chat", chat_controllers.GetAllChatsByUser)
+		router.Get("/search", chat_controllers.SearchGroupByName)
 	})
 	go messages.RunHubGroup()
 	micro.Route("/group", func(router fiber.Router) {
