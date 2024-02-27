@@ -22,6 +22,7 @@ type User struct {
 	ResetPasswordExpiry time.Time  `gorm:""`
 	CreatedAt           *time.Time `gorm:"not null;default:now()"`
 	UpdatedAt           *time.Time `gorm:"not null;default:now()"`
+	Online              bool       `gorm:"default:false"`
 }
 
 type SignUpInput struct {

@@ -56,6 +56,7 @@ type ResponseMessage struct {
 	Username        string          `json:"username,omitempty"`
 	CreatedAt       time.Time       `json:"created_at,omitempty"`
 	UpdatedAt       time.Time       `json:"updated_at,omitempty"`
+	Online          bool            `json:"online,omitempty"`
 }
 
 type ParentMessages struct {
@@ -113,6 +114,7 @@ func FilterMessageRecord(message *Message) ResponseMessage {
 		Text:            message.Text,
 		CreatedAt:       message.CreatedAt,
 		UpdatedAt:       message.UpdatedAt,
+		Online:          false,
 	}
 }
 

@@ -30,7 +30,30 @@ func HandlerWebSocketChat(c *websocket.Conn) {
 		return
 	}
 
+	var chat models.Chat
+	if err := initializers.DB.First(&chat, chatID).Error; err != nil {
+		log.Println("failed to get chat:", err)
+		return
+	}
+	var userID2 *uuid.UUID
+	if user.ID == chat.User1ID {
+		userID2 = chat.User2ID
+	} else {
+		userID2 = chat.User2ID
+	}
+
+	var user2 models.User
+	if err := initializers.DB.Where("id = ?", userID2).First(&user2).Error; err != nil {
+		log.Println("failed to get user:", err)
+		c.Close()
+		return
+	}
+
+	user.Online = true
+	initializers.DB.Save(&user)
 	defer func() {
+		user.Online = false
+		initializers.DB.Save(&user)
 		unregister <- c
 		c.Close()
 	}()

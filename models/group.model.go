@@ -84,6 +84,7 @@ type GroupMessageResponse struct {
 	Text            string               `json:"text,omitempty"`
 	CreatedAt       time.Time            `json:"created_at"`
 	UpdatedAt       time.Time            `json:"updated_at"`
+	Online          bool                 `json:"online,omitempty"`
 }
 
 type ParentMessagesGroup struct {
@@ -127,6 +128,7 @@ func FilterGroupMessageRecord(groupMessage *GroupMessage) GroupMessageResponse {
 		Text:            groupMessage.Text,
 		CreatedAt:       groupMessage.CreatedAt,
 		UpdatedAt:       groupMessage.UpdatedAt,
+		Online:          false,
 	}
 }
 

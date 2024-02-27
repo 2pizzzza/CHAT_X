@@ -30,8 +30,11 @@ func HandlerWebSocketGroupMessages(c *websocket.Conn) {
 		c.Close()
 		return
 	}
-
+	user.Online = true
+	initializers.DB.Save(&user)
 	defer func() {
+		user.Online = false
+		initializers.DB.Save(&user)
 		unregister <- c
 		c.Close()
 	}()
