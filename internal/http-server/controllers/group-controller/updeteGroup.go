@@ -10,25 +10,21 @@ import (
 )
 
 func UpdateGroup(c *fiber.Ctx) error {
-	// Проверка на наличие токена авторизации
 	token := c.Get("Authorization")
 	if token == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
 
-	// Получение пользователя из токена
 	user, err := auth_controllers.GetUserFromToken(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
 	}
 
-	// Получение идентификатора группы из URL
 	groupID, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid group ID"})
 	}
 
-	// Проверка, является ли пользователь админом группы
 	var group models.Group
 	if err := initializers.DB.Preload("Admins").Where("id = ?", groupID).First(&group).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Group not found"})
@@ -46,7 +42,6 @@ func UpdateGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"message": "You are not an admin of this group"})
 	}
 
-	// Парсинг формы с файлами
 	form, err := c.MultipartForm()
 	if err != nil {
 		return err

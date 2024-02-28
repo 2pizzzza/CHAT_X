@@ -53,6 +53,7 @@ func main() {
 		router.Post("/reset-password-request", auth_controllers.ResetPasswordRequest)
 		router.Post("/reset-password-verify", auth_controllers.ResetPasswordVerify)
 		router.Post("/reset-password", auth_controllers.ResetPassword)
+		router.Put("/update", auth_controllers.UpdateUserProfile)
 	})
 	app.Get("/chat/signal/:chatID", func(c *fiber.Ctx) error {
 		chatID := c.Params("chatID")
