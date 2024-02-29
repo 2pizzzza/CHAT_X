@@ -102,7 +102,7 @@ func SignInUser(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
-	config, err := initializers.LoadConfig(".")
+	config, err := initializers.LoadConfig()
 	c.Cookie(&fiber.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,

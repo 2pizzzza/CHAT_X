@@ -6,11 +6,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ChangePasswordRequest struct {
-	CurrentPassword string `json:"old_password"`
-	NewPassword     string `json:"new_password"`
-}
-
 func ChangePassword(c *fiber.Ctx) error {
 	type ChangePasswordInput struct {
 		CurrentPassword string `json:"current_password"`

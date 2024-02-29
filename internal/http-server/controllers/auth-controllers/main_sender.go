@@ -66,7 +66,7 @@ func GetUserFromToken(c *fiber.Ctx) (models.User, error) {
 	token = strings.ReplaceAll(token, "Bearer ", "")
 	claims := jwt.MapClaims{}
 
-	config, err := initializers.LoadConfig(".")
+	config, err := initializers.LoadConfig()
 	if err != nil {
 		return models.User{}, err
 	}

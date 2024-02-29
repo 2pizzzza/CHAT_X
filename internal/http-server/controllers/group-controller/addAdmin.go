@@ -66,6 +66,5 @@ func AddAdmin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to add admin to group"})
 	}
 
-	// Возвращаем успешный ответ
 	return c.JSON(fiber.Map{"message": "Admin added successfully"})
 }

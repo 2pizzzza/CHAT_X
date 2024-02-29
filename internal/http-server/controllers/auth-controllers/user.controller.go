@@ -2,6 +2,7 @@ package auth_controllers
 
 import (
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/wpcodevo/golang-fiber-jwt/internal/storage/initializers"
 	"github.com/wpcodevo/golang-fiber-jwt/models"
 	"path/filepath"
@@ -11,13 +12,6 @@ func GetMe(c *fiber.Ctx) error {
 	user := c.Locals("user").(models.UserResponse)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "data": fiber.Map{"user": user}})
-}
-
-type UserProfileUpdateRequest struct {
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Photo  string `json:"photo"`
-	Online bool   `json:"online"`
 }
 
 func UpdateUserProfile(c *fiber.Ctx) error {

@@ -27,7 +27,7 @@ func RefreshAccessToken(c *fiber.Ctx) error {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		config, err := initializers2.LoadConfig(".")
+		config, err := initializers2.LoadConfig()
 		if err != nil {
 			return nil, err
 		}

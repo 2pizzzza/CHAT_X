@@ -24,7 +24,7 @@ func DeserializeUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "You are not logged in"})
 	}
 
-	config, _ := initializers2.LoadConfig(".")
+	config, _ := initializers2.LoadConfig()
 
 	tokenByte, err := jwt.Parse(tokenString, func(jwtToken *jwt.Token) (interface{}, error) {
 		if _, ok := jwtToken.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -1,0 +1,17 @@
+{
+  "ENV": "local",
+  "POSTGRES_HOST": "dpg-cng1arvsc6pc73emc4e0-a",
+  "POSTGRES_PORT": 5432,
+  "POSTGRES_USER": "chat_x_6mwh_user",
+  "POSTGRES_PASSWORD": "weTEdefXHQI4xMBWlh80gR1IvcgtOUK2",
+  "POSTGRES_DB": "chat_x_6mwh",
+  "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/chat_x?schema=public",
+  "CLIENT_ORIGIN": "http://localhost:3000",
+  "PGADMIN_DEFAULT_EMAIL": "admin@admin.com",
+  "PGADMIN_DEFAULT_PASSWORD": "password123",
+  "JWT_SECRET": "my_ultra_secure_secret",
+  "JWT_EXPIRED_IN": "60m",
+  "JWT_MAXAGE": 60,
+  "REFRESH_TOKEN_EXPIRED_IN": "96h",
+  "REFRESH_TOKEN_MAXAGE": 100
+}

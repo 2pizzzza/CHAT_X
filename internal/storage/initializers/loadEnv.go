@@ -23,10 +23,8 @@ type Config struct {
 	ClientOrigin          string        `mapstructure:"CLIENT_ORIGIN"`
 }
 
-func LoadConfig(path string) (config Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigType("env")
-	viper.SetConfigName("app")
+func LoadConfig() (config Config, err error) {
+	viper.SetConfigFile("app.json")
 
 	viper.AutomaticEnv()
 

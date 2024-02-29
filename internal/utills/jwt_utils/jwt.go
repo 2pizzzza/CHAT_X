@@ -13,7 +13,7 @@ import (
 )
 
 func GenerateTokens(userID *uuid.UUID) (string, string, error) {
-	config, err := initializers.LoadConfig(".")
+	config, err := initializers.LoadConfig()
 	if err != nil {
 		return "", "", err
 	}
@@ -46,7 +46,7 @@ func GenerateTokens(userID *uuid.UUID) (string, string, error) {
 
 func ValidateToken(c *websocket.Conn) (jwt.MapClaims, error) {
 	tokenString := c.Headers("Authorization")
-	config, err := initializers.LoadConfig(".")
+	config, err := initializers.LoadConfig()
 	jwtSecret := config.JwtSecret
 	if err != nil {
 		slog.Error("error load config is", err)
