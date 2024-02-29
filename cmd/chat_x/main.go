@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -41,7 +42,7 @@ func main() {
 		AllowMethods:     "GET, POST",
 		AllowCredentials: true,
 	}))
-
+	app.Get("/swagger/*", swagger.HandlerDefault)
 	micro.Route("/auth", func(router fiber.Router) {
 		router.Post("/register", auth_controllers.SignUpUser)
 		router.Post("/login", auth_controllers.SignInUser)
@@ -81,7 +82,7 @@ func main() {
 		router.Post("/messages", middleware.DeserializeUser, chat_controllers.CreateMessage)
 		router.Post("/delete-messages", middleware.DeserializeUser, chat_controllers.DeleteMessage)
 		router.Get("/ws/:chatID", websocket.New(chat_controllers.HandlerWebSocketChat))
-		router.Put("change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
+		router.Put("/change-messages", middleware.DeserializeUser, chat_controllers.UpdateMessage)
 		router.Post("/reply-messages", chat_controllers.ReplyToMessage)
 		router.Get("/get-all-chat", chat_controllers.GetAllChatsByUser)
 		router.Get("/search", chat_controllers.SearchGroupByName)
