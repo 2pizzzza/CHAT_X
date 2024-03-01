@@ -56,6 +56,5 @@ func RefreshAccessToken(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "fail", "message": "Failed to generate access token"})
 	}
 
-	// Отправляем новый access token в ответе
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "access_token": accessToken})
 }

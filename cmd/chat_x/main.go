@@ -47,7 +47,6 @@ func main() {
 		router.Post("/register", auth_controllers.SignUpUser)
 		router.Post("/login", auth_controllers.SignInUser)
 		router.Get("/logout", middleware.DeserializeUser, auth_controllers.LogoutUser)
-		router.Post("/confirm", auth_controllers.ConfirmUser)
 		router.Post("/refresh", auth_controllers.RefreshAccessToken)
 		router.Post("/change-password", auth_controllers.ChangePassword)
 		router.Get("/verify-email", auth_controllers.VerifyEmail)

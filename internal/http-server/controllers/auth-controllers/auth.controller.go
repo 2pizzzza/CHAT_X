@@ -53,19 +53,6 @@ func SignUpUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Something bad happened"})
 	}
 
-	//verificationCode := generateVerificationCode()
-	//
-	//// Отправка письма с кодом подтверждения на email
-	//err = sendVerificationEmail(newUser.Email, verificationCode)
-	//if err != nil {
-	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to send verification email"})
-	//}
-	//newUser.ConfirmationCode = verificationCode
-	//result = initializers.DB.Save(&newUser)
-	//if result.Error != nil {
-	//	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user record"})
-	//}
-
 	accessToken, refreshToken, err := jwt_utils.GenerateTokens(newUser.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": err.Error()})

@@ -13,7 +13,6 @@ import (
 	"net/smtp"
 )
 
-// link
 func VerifyEmail(c *fiber.Ctx) error {
 	confirmationLink := c.Query("link")
 
@@ -28,33 +27,6 @@ func VerifyEmail(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).SendString("your account is verifie")
-}
-
-func ConfirmUser(c *fiber.Ctx) error {
-	var confirmation struct {
-		Code string `json:"code"`
-	}
-	if err := c.BodyParser(&confirmation); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"status": "fail", "message": err.Error()})
-	}
-
-	user, err := GetUserFromToken(c)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "fail", "message": "Unauthorized"})
-	}
-
-	if user.ConfirmationCode != confirmation.Code {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"status": "fail", "message": "Invalid confirmation code"})
-	}
-
-	user.Verified = true
-	user.ConfirmationCode = ""
-
-	if err := initializers.DB.Save(&user).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to update user"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "success", "message": "User confirmed successfully"})
 }
 
 func GetUserFromToken(c *fiber.Ctx) (models.User, error) {
