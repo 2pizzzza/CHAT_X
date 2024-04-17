@@ -1,6 +1,6 @@
 module github.com/wpcodevo/golang-fiber-jwt
 
-go 1.22
+go 1.22.1
 
 require (
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
