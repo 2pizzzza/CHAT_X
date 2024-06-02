@@ -42,5 +42,5 @@ The application uses WebSocket for real-time chat communication. WebSocket conne
 To use this application, make sure you have Go installed. Clone the repository and run the following commands:
 
 ```sh
-go mod download
+go mod tidy
 go run main.go

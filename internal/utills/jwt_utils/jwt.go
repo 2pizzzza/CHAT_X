@@ -18,7 +18,6 @@ func GenerateTokens(userID *uuid.UUID) (string, string, error) {
 		return "", "", err
 	}
 
-	// Create access token
 	accessToken := jwt.New(jwt.SigningMethodHS256)
 	accessClaims := accessToken.Claims.(jwt.MapClaims)
 	accessClaims["sub"] = userID
@@ -30,7 +29,6 @@ func GenerateTokens(userID *uuid.UUID) (string, string, error) {
 		return "", "", fmt.Errorf("generating JWT Token failed: %v", err)
 	}
 
-	// Create refresh token
 	refreshToken := jwt.New(jwt.SigningMethodHS256)
 	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
 	refreshClaims["sub"] = userID
